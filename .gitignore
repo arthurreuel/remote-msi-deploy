@@ -1,0 +1,11 @@
+# Segredos — NUNCA versionar
+token.txt
+
+# Instalador e binarios de terceiros
+*.msi
+PSTools/
+
+# Saidas de execucao (contem nomes de maquinas reais)
+resultado_*.csv
+diag_*.txt
+*.log
