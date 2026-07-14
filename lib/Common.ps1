@@ -17,14 +17,19 @@ function Get-DeployConfig {
     }
     $cfg = Import-PowerShellDataFile -Path $cfgPath
 
+    # Chaves opcionais recebem padrao se ausentes (evita erro sob StrictMode
+    # em config.psd1 minimos, e permite rodar o reparo so com a lista de maquinas).
+    $defaults = @{ MsiFileName = 'Agent.msi'; WorkDir = 'C:\Temp'; PsExecServiceName = 'pvdeploy'; MachinesFile = '' }
+    foreach ($k in $defaults.Keys) { if (-not $cfg.ContainsKey($k)) { $cfg[$k] = $defaults[$k] } }
+
     # Lista de maquinas: arquivo externo tem prioridade sobre a lista inline.
     if ($cfg.MachinesFile) {
         $mf = if ([IO.Path]::IsPathRooted($cfg.MachinesFile)) { $cfg.MachinesFile } else { Join-Path $Root $cfg.MachinesFile }
         if (-not (Test-Path $mf)) { throw "MachinesFile definido mas nao encontrado: $mf" }
-        $cfg.Machines = Get-Content $mf | ForEach-Object { $_.Trim() } |
-                        Where-Object { $_ -and -not $_.StartsWith('#') }
+        $cfg.Machines = @(Get-Content $mf | ForEach-Object { $_.Trim() } |
+                        Where-Object { $_ -and -not $_.StartsWith('#') })
     }
-    if (-not $cfg.Machines -or $cfg.Machines.Count -eq 0) {
+    if (-not $cfg.ContainsKey('Machines') -or -not $cfg.Machines -or @($cfg.Machines).Count -eq 0) {
         throw "Nenhuma maquina definida (config.Machines ou MachinesFile)."
     }
 
