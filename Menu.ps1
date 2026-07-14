@@ -44,6 +44,29 @@ function Invoke-Flow {
     Write-Host "`n<<< Fluxo $Name finalizado." -ForegroundColor Cyan
 }
 
+function Invoke-Repair {
+    Write-Host "`n  Reparar acesso (pre-requisitos das estacoes):" -ForegroundColor Cyan
+    Write-Host "   a) Habilitar compartilhamento  (C$/SMB + descoberta de rede)"
+    Write-Host "   b) Desativar firewall          (temporario / diagnostico)"
+    Write-Host "   c) Reativar firewall"
+    $map = @{ a='EnableSharing'; b='DisableFirewall'; c='EnableFirewall' }
+    $act = $map[(Read-Host "   Escolha (a/b/c)")]
+    if (-not $act) { Write-Host "   Cancelado." -ForegroundColor DarkYellow; return }
+
+    $callArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $root 'scripts\Repair-Access.ps1'),'-Action',$act)
+    if ($act -eq 'DisableFirewall') {
+        Write-Host "   [!] Desativar o firewall expoe a maquina - use por janela minima." -ForegroundColor Yellow
+        if ((Read-Host "   Digite SIM para confirmar") -ne 'SIM') { Write-Host "   Cancelado."; return }
+        $callArgs += '-Force'
+    }
+    Write-Host "`n>>> Reparar acesso: $act`n" -ForegroundColor Cyan
+    & powershell @callArgs
+    Write-Host "`n<<< Reparar acesso finalizado." -ForegroundColor Cyan
+    if ($act -eq 'EnableSharing') {
+        Write-Host "    (Para maquinas que o PsExec NAO alcanca, use scripts\Repair-Access-Local.ps1 via GPO.)" -ForegroundColor DarkGray
+    }
+}
+
 function Show-Header {
     Write-Host ""
     Write-Host "==================================================" -ForegroundColor DarkCyan
@@ -72,6 +95,7 @@ do {
     Write-Host "  2) Deploy      (instala onde falta - idempotente)"
     Write-Host "  3) Re-enroll   (renova identidade - conserta 'offline no painel')"
     Write-Host "  4) Reset       (purga + reinstala + diagnostica - ultimo recurso)"
+    Write-Host "  5) Reparar acesso  (compartilhamento C$/SMB e firewall)"
     Write-Host "  0) Sair"
     $op = Read-Host "`n  Escolha"
     switch ($op) {
@@ -79,6 +103,7 @@ do {
         '2' { Invoke-Flow Deploy }
         '3' { Invoke-Flow Reenroll }
         '4' { Invoke-Flow Reset }
+        '5' { Invoke-Repair }
         '0' { }
         default { Write-Host "  Opcao invalida." -ForegroundColor Red }
     }

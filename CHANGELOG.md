@@ -3,6 +3,20 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.2.0] - 2026-07-14
+
+### Adicionado
+- **Fluxo "Reparar acesso"** para os bloqueios recorrentes de pré-requisito:
+  - `scripts/Repair-Access.ps1` (remoto, via PsExec): habilita
+    Compartilhamento de Arquivos e Impressoras + Descoberta de Rede
+    (destrava `C$`/SMB), ou desativa/reativa o firewall dos 3 perfis.
+  - `scripts/Repair-Access-Local.ps1` (local/GPO): mesma correção de
+    compartilhamento rodando **na própria máquina**, para os casos em que
+    o PsExec não alcança (SMB já bloqueado).
+  - Usa identificadores de regra locale-independentes (Windows PT-BR/EN).
+  - Opção **5) Reparar acesso** no `Menu.ps1`; `DisableFirewall` pede
+    confirmação e lembra de reativar.
+
 ## [1.1.0] - 2026-07-10
 
 ### Adicionado
@@ -38,5 +52,6 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.2.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.2.0
 [1.1.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.1.0
 [1.0.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.0.0

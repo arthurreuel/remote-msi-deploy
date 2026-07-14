@@ -51,6 +51,35 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Reset-Agent.ps1
 
 **Sempre confirme no painel de destino**, não só no DeviceId local. Cada execução grava um `resultado_*.csv` auditável na raiz.
 
+## Reparar acesso (pré-requisitos das estações)
+
+Dois bloqueios recorrentes impedem a ferramenta de agir: **`C$`/SMB fechado**
+(erro `Sem acesso C$`) e **firewall** atrapalhando. O fluxo **5) Reparar acesso**
+(menu) trata os dois:
+
+| Ação | O que faz | Quando usar |
+|---|---|---|
+| Habilitar compartilhamento | Liga "Arquivos e Impressoras" + "Descoberta de Rede" e o serviço `LanmanServer` | Padronizar/destravar `C$` em máquinas **alcançáveis** |
+| Desativar firewall | Desliga os 3 perfis (temporário) | Diagnóstico (ex.: testar se o firewall local bloqueia o agente) |
+| Reativar firewall | Religa os 3 perfis | Sempre, após o diagnóstico |
+
+### O paradoxo do SMB (importante)
+
+Se o `C$`/SMB **já está bloqueado**, o PsExec **não consegue entrar** para
+consertar — `Repair-Access.ps1` vai falhar nessas. Para esses casos use
+**`scripts/Repair-Access-Local.ps1`**, que roda **na própria máquina** e não
+depende de PsExec:
+
+- **Via GPO (recomendado para muitas máquinas):** Configuração do Computador →
+  Políticas → Configurações do Windows → Scripts → **Inicialização** — aponte o
+  `Repair-Access-Local.ps1`. Roda como SYSTEM no boot e abre o compartilhamento.
+- **Localmente:** PowerShell como Administrador na estação:
+  `powershell -ExecutionPolicy Bypass -File .\Repair-Access-Local.ps1`
+
+Depois que ele rodar, o servidor de gestão volta a alcançar o `C$` e os demais
+fluxos (Deploy/Re-enroll) passam a funcionar naquela máquina. Ele registra um
+log em `C:\ProgramData\RemoteMsiDeploy\repair-access.log`.
+
 ## Dicas de campo
 
 - **PsExec bloqueado como "arquivo da internet":** `Unblock-File .\PSTools\PsExec64.exe`.
