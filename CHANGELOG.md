@@ -3,6 +3,20 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.5.0] - 2026-07-14
+
+### Adicionado
+- **Fluxo de remoção** (`scripts/Uninstall-Agent.ps1`, menu **7) Remover**):
+  desinstala o agente das máquinas; opção `-Purge` também apaga registro e
+  ProgramData (limpeza total). Confirmação obrigatória + retry. Não precisa de
+  token nem do MSI (desinstala pelo ProductCode já presente na máquina).
+- **Portabilidade — auto-provisionamento**: ao abrir o menu numa cópia
+  recém-transportada (sem PsExec/MSI), a ferramenta busca os binários sozinha
+  antes de começar.
+- **Empacotador portátil** (`Empacotar.ps1` / `Empacotar.cmd`): gera um `.zip`
+  leve (sem `Logs/`, `PSTools/`, `*.msi` — reconstruídos no destino) pronto para
+  copiar a outra máquina admin e usar.
+
 ## [1.4.2] - 2026-07-14
 
 ### Corrigido
@@ -113,6 +127,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.5.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.5.0
 [1.4.2]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.2
 [1.4.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.1
 [1.4.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.0

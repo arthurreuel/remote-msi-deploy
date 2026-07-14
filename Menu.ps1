@@ -68,6 +68,23 @@ function Invoke-Repair {
     }
 }
 
+function Invoke-Uninstall {
+    Write-Host "`n  Remover agente das estacoes:" -ForegroundColor Cyan
+    Write-Host "   u) Desinstalar"
+    Write-Host "   p) Desinstalar + purgar registro/ProgramData (limpeza total)"
+    $sub = Read-Host "   Escolha (u/p)"
+    $callArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $root 'scripts\Uninstall-Agent.ps1'))
+    if     ($sub -eq 'p') { $callArgs += '-Purge' }
+    elseif ($sub -ne 'u') { Write-Host "   Cancelado." -ForegroundColor DarkYellow; return }
+    Write-Host "   [!] Isto REMOVE o agente das maquinas da lista." -ForegroundColor Yellow
+    if ($sub -eq 'p') { Write-Host "       O purge apaga registro e ProgramData (irreversivel)." -ForegroundColor Yellow }
+    if ((Read-Host "   Digite SIM para confirmar") -ne 'SIM') { Write-Host "   Cancelado."; return }
+    $callArgs += '-Force'
+    Write-Host "`n>>> Removendo agente...`n" -ForegroundColor Cyan
+    & powershell @callArgs
+    Write-Host "`n<<< Remocao finalizada." -ForegroundColor Cyan
+}
+
 function Show-Header {
     Write-Host ""
     Write-Host "==================================================" -ForegroundColor DarkCyan
@@ -97,6 +114,19 @@ if (-not (Test-Admin)) {
     return
 }
 
+# --- Auto-provisionamento (portabilidade): se esta e uma copia recem-transportada
+#     sem PsExec (ou sem o MSI), busca os binarios antes de comecar.
+try {
+    $cfg0 = Get-DeployConfig -Root $root -SkipMachineCheck
+    $faltaPsexec = -not (Test-Path $cfg0.PsExecPath)
+    $faltaMsi    = $cfg0.MsiSource -and -not (Test-Path $cfg0.MsiPath)
+    if ($faltaPsexec -or $faltaMsi) {
+        Write-Host "Primeira execucao nesta maquina: provisionando binarios..." -ForegroundColor Yellow
+        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\Provision-Assets.ps1')
+        Write-Host ""
+    }
+} catch { }
+
 # --- Modo direto (nao-interativo) ---
 if ($Flow) { Invoke-Flow -Name $Flow; return }
 
@@ -109,6 +139,7 @@ do {
     Write-Host "  4) Reset       (purga + reinstala + diagnostica - ultimo recurso)"
     Write-Host "  5) Reparar acesso  (compartilhamento C$/SMB e firewall)"
     Write-Host "  6) Provisionar     (baixa/atualiza PsExec + .msi na pasta)"
+    Write-Host "  7) Remover         (desinstala o agente das maquinas)"
     Write-Host "  0) Sair"
     $op = Read-Host "`n  Escolha"
     switch ($op) {
@@ -118,6 +149,7 @@ do {
         '4' { Invoke-Flow Reset }
         '5' { Invoke-Repair }
         '6' { Invoke-Flow Provision }
+        '7' { Invoke-Uninstall }
         '0' { }
         default { Write-Host "  Opcao invalida." -ForegroundColor Red }
     }

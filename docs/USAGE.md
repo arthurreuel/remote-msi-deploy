@@ -80,6 +80,24 @@ Depois que ele rodar, o servidor de gestão volta a alcançar o `C$` e os demais
 fluxos (Deploy/Re-enroll) passam a funcionar naquela máquina. Ele registra um
 log em `C:\ProgramData\RemoteMsiDeploy\repair-access.log`.
 
+## Remover o agente
+
+Menu **7) Remover** (ou `scripts\Uninstall-Agent.ps1`): desinstala o agente das
+máquinas da lista. Opção **purgar** (`-Purge`) também apaga a chave de registro e
+o `ProgramData` — deixa a máquina "virgem". Pede confirmação digitada. Não precisa
+de token nem do `.msi` (desinstala pelo ProductCode já presente na máquina).
+
+## Levar para outra máquina (portátil)
+
+A ferramenta roda de qualquer pasta e em qualquer máquina admin do domínio.
+
+1. `Empacotar.cmd` gera um **`.zip` leve** na pasta pai (sem `Logs/`, `PSTools/`
+   e `*.msi`). Ele **inclui** `config.psd1` e `token.txt` — trate como confidencial.
+2. Copie o `.zip` para a outra máquina e descompacte.
+3. Rode **`Executar.cmd`** (como admin). Na **primeira execução**, o menu
+   **provisiona sozinho** o PsExec e o `.msi` (da origem configurada) — depois é só
+   usar os fluxos.
+
 ## Dicas de campo
 
 - **PsExec bloqueado como "arquivo da internet":** `Unblock-File .\PSTools\PsExec64.exe`.

@@ -83,12 +83,19 @@ Um único lançador dá acesso a todos os fluxos — sem decorar comando:
   2) Deploy      (instala onde falta - idempotente)
   3) Re-enroll   (renova identidade)
   4) Reset       (purga + reinstala + diagnostica)
+  5) Reparar acesso  (compartilhamento C$/SMB e firewall)
+  6) Provisionar     (baixa/atualiza PsExec + .msi)
+  7) Remover         (desinstala o agente)
   0) Sair
 ```
 
-- **Duplo-clique:** `Executar.cmd` abre o menu já elevado (UAC).
-- **Automação:** `.\Menu.ps1 -Flow Deploy` roda um fluxo direto, sem menu (aceita `Inventory|Deploy|Reenroll|Reset`).
-- O **Reset** pede confirmação digitada antes de agir.
+- **Duplo-clique:** `Executar.cmd` abre o menu já elevado (UAC). O menu também **se auto-eleva** se aberto sem admin.
+- **Automação:** `.\Menu.ps1 -Flow Deploy` roda um fluxo direto, sem menu.
+- **Reset** e **Remover** pedem confirmação digitada antes de agir.
+
+### Portabilidade — leve para qualquer máquina admin do setor
+
+A ferramenta é autossuficiente: `Empacotar.cmd` gera um **`.zip` leve** (sem `Logs/`, `PSTools/` e `*.msi`, que se refazem no destino). Na outra máquina, descompacte e rode `Executar.cmd` — na **primeira execução** o menu **provisiona sozinho** o PsExec (Sysinternals) e o `.msi` (da origem configurada). Sem instalação, sem dependências manuais.
 
 Passo a passo completo (inclusive como descobrir os nomes do seu agente): **[docs/USAGE.md](docs/USAGE.md)**. Cada execução grava um `resultado_<operacao>_<timestamp>.csv` auditável na pasta `Logs\`.
 
