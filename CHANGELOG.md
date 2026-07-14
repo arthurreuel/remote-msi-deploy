@@ -3,6 +3,14 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.1.0] - 2026-07-10
+
+### Adicionado
+- **Interface gráfica de configuração** (`Configurar.ps1` / `Configurar.cmd`):
+  formulário para apontar instalador, token, máquinas, domínio, método e os
+  nomes do agente, gerando `config.psd1` + `machines.txt` + `token.txt` sem
+  editar arquivo à mão.
+
 ## [1.0.0] - 2026-07-10
 
 Primeira versão estável. Toolkit completo para gerenciar um agente de
@@ -30,4 +38,5 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.1.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.1.0
 [1.0.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.0.0

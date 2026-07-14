@@ -59,12 +59,15 @@ remote-msi-deploy/
 ## Início rápido
 
 ```powershell
-# 1. Coloque Agent.msi, token.txt e PSTools\ na raiz
-# 2. Copie config.example.psd1 -> config.psd1 e ajuste nomes/máquinas do seu agente
-# 3. Abra o menu de fluxos (como administrador):
+# 1. Coloque Agent.msi e PSTools\PsExec64.exe na raiz
+# 2. Configure com a interface gráfica (aponta instalador, token, máquinas...):
 cd <pasta-do-repo>
-powershell -ExecutionPolicy Bypass -File .\Menu.ps1
+powershell -ExecutionPolicy Bypass -File .\Configurar.ps1      # ou duplo-clique em Configurar.cmd
+# 3. Abra o menu de fluxos (como administrador):
+powershell -ExecutionPolicy Bypass -File .\Menu.ps1            # ou duplo-clique em Executar.cmd
 ```
+
+> Prefere sem interface? Copie `config.example.psd1` → `config.psd1` e edite à mão — funciona igual.
 
 ### Menu de fluxos (`Menu.ps1`)
 
