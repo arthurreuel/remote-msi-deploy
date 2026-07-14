@@ -3,6 +3,20 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.3.1] - 2026-07-14
+
+### Alterado
+- **Interface**: seção "Instalador (.msi)" reorganizada — **Origem (rede/SysVol)**
+  marcada como recomendada e **Local** como **opcional (fallback)** para máquinas
+  sem acesso à origem, com dicas explicativas. O campo local agora começa vazio.
+
+### Corrigido
+- **Máquinas na interface**: quebras de linha `\n` apareciam grudadas (a caixa
+  do WinForms só renderiza `\r\n`) e podiam zerar a lista ao salvar. Normalizado
+  na carga.
+- Ao salvar com o instalador local vazio, o `MsiFileName` configurado é
+  preservado (antes caía para 'Agent.msi').
+
 ## [1.3.0] - 2026-07-14
 
 ### Adicionado
@@ -69,6 +83,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.3.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.1
 [1.3.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.0
 [1.2.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.2.0
 [1.1.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.1.0

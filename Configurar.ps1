@@ -1,8 +1,8 @@
 <#
   Configurar.ps1 - interface grafica de configuracao do toolkit.
-  Preenche instalador, origem do instalador, token, maquinas, dominio,
-  metodo e os nomes do agente; grava config.psd1 + machines.txt + token.txt
-  e, ao salvar, provisiona os binarios (PsExec + .msi) na pasta.
+  Preenche origem/instalador, token, maquinas, dominio, metodo e os nomes
+  do agente; grava config.psd1 + machines.txt + token.txt e, ao salvar,
+  provisiona os binarios (PsExec + .msi) na pasta.
 #>
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -31,7 +31,9 @@ if (Test-Path $cfgPath) {
     try { $c = Import-PowerShellDataFile $cfgPath; foreach ($k in @($d.Keys)) { if ($c.ContainsKey($k) -and $c[$k]) { $d[$k] = $c[$k] } } } catch {}
 }
 $tokenAtual = if (Test-Path $tokenPath) { (Get-Content $tokenPath -Raw).Trim() } else { '' }
-$machAtual  = if (Test-Path $machPath)  { (Get-Content $machPath -Raw) } else { '' }
+# Normaliza quebras de linha para CRLF (a caixa de texto do WinForms so
+# renderiza \r\n; arquivos salvos com \n apareceriam grudados numa linha).
+$machAtual  = if (Test-Path $machPath)  { (Get-Content $machPath) -join "`r`n" } else { '' }
 
 function New-Label($text,$x,$y,$w=180) {
     $l = New-Object System.Windows.Forms.Label
@@ -41,72 +43,77 @@ function New-Text($val,$x,$y,$w=360) {
     $t = New-Object System.Windows.Forms.TextBox
     $t.Text = "$val"; $t.Location = "$x,$y"; $t.Size = "$w,22"; $t
 }
+function New-Hint($text,$x,$y,$w=610) {
+    $l = New-Object System.Windows.Forms.Label
+    $l.Text = $text; $l.Location = "$x,$y"; $l.Size = "$w,16"
+    $l.ForeColor = [System.Drawing.Color]::Gray
+    $l.Font = New-Object System.Drawing.Font("Segoe UI",8)
+    $l
+}
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Configurar - Remote MSI Deploy"
-$form.Size = New-Object System.Drawing.Size(660,760)
+$form.Size = New-Object System.Drawing.Size(660,780)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox = $false
 
-$y = 15
+$y = 12
 $hdr = New-Object System.Windows.Forms.Label
 $hdr.Text = "Preencha e clique em Salvar. Ao salvar, os binarios (PsExec + .msi) sao copiados para esta pasta."
 $hdr.Location = "15,$y"; $hdr.Size = "620,20"; $hdr.Font = New-Object System.Drawing.Font("Segoe UI",9,[System.Drawing.FontStyle]::Bold)
-$form.Controls.Add($hdr); $y += 30
+$form.Controls.Add($hdr); $y += 28
 
-# Origem do instalador (pasta de rede / SysVol)
-$form.Controls.Add((New-Label "Origem do instalador (pasta):" 15 $y 190))
-$txtSrc = New-Text $d.MsiSource 210 $y 320
+# ===== Instalador (.msi) =====
+$secMsi = New-Label "Instalador (.msi)" 15 $y 200
+$secMsi.Font = New-Object System.Drawing.Font("Segoe UI",9,[System.Drawing.FontStyle]::Bold)
+$form.Controls.Add($secMsi); $y += 22
+
+# Origem (recomendado)
+$form.Controls.Add((New-Label "Origem (rede/SysVol):" 15 $y 150))
+$txtSrc = New-Text $d.MsiSource 170 $y 360
 $form.Controls.Add($txtSrc)
 $btnSrc = New-Object System.Windows.Forms.Button
 $btnSrc.Text = "Pasta..."; $btnSrc.Location = "540,$y"; $btnSrc.Size = "90,24"
-$btnSrc.Add_Click({
-    $fbd = New-Object System.Windows.Forms.FolderBrowserDialog
-    if ($fbd.ShowDialog() -eq 'OK') { $txtSrc.Text = $fbd.SelectedPath }
-})
-$form.Controls.Add($btnSrc); $y += 32
+$btnSrc.Add_Click({ $fbd = New-Object System.Windows.Forms.FolderBrowserDialog; if ($fbd.ShowDialog() -eq 'OK') { $txtSrc.Text = $fbd.SelectedPath } })
+$form.Controls.Add($btnSrc); $y += 24
+$form.Controls.Add((New-Hint "Recomendado: o instalador e trazido daqui automaticamente ao salvar." 170 $y)); $y += 20
 
-# Instalador (.msi) local
-$form.Controls.Add((New-Label "Instalador (.msi) local:" 15 $y 190))
-$txtMsi = New-Text (Join-Path $root $d.MsiFileName) 210 $y 320
+# Local (opcional / fallback)
+$form.Controls.Add((New-Label "Local (opcional):" 15 $y 150))
+$txtMsi = New-Text '' 170 $y 360
 $form.Controls.Add($txtMsi)
 $btnMsi = New-Object System.Windows.Forms.Button
 $btnMsi.Text = "Procurar..."; $btnMsi.Location = "540,$y"; $btnMsi.Size = "90,24"
-$btnMsi.Add_Click({
-    $ofd = New-Object System.Windows.Forms.OpenFileDialog
-    $ofd.Filter = "Windows Installer (*.msi)|*.msi"
-    if ($ofd.ShowDialog() -eq 'OK') { $txtMsi.Text = $ofd.FileName }
-})
-$form.Controls.Add($btnMsi); $y += 34
+$btnMsi.Add_Click({ $ofd = New-Object System.Windows.Forms.OpenFileDialog; $ofd.Filter = "Windows Installer (*.msi)|*.msi"; if ($ofd.ShowDialog() -eq 'OK') { $txtMsi.Text = $ofd.FileName } })
+$form.Controls.Add($btnMsi); $y += 24
+$form.Controls.Add((New-Hint "Use SO em maquina sem acesso a origem acima. Normalmente deixe em branco." 170 $y)); $y += 24
 
-# Token
-$form.Controls.Add((New-Label "Token de enrollment:" 15 $y 190))
-$txtToken = New-Text $tokenAtual 210 $y 420
-$form.Controls.Add($txtToken); $y += 32
+# ===== Enrollment / rede =====
+$form.Controls.Add((New-Label "Token de enrollment:" 15 $y 150))
+$txtToken = New-Text $tokenAtual 170 $y 460
+$form.Controls.Add($txtToken); $y += 30
 
-# Dominio
-$form.Controls.Add((New-Label "Dominio (informativo):" 15 $y 190))
-$txtDom = New-Text $d.Domain 210 $y 420
-$form.Controls.Add($txtDom); $y += 32
+$form.Controls.Add((New-Label "Dominio (informativo):" 15 $y 150))
+$txtDom = New-Text $d.Domain 170 $y 460
+$form.Controls.Add($txtDom); $y += 30
 
-# Metodo
-$form.Controls.Add((New-Label "Metodo de execucao:" 15 $y 190))
+$form.Controls.Add((New-Label "Metodo de execucao:" 15 $y 150))
 $cboMet = New-Object System.Windows.Forms.ComboBox
-$cboMet.Location = "210,$y"; $cboMet.Size = "200,22"; $cboMet.DropDownStyle = "DropDownList"
+$cboMet.Location = "170,$y"; $cboMet.Size = "200,22"; $cboMet.DropDownStyle = "DropDownList"
 [void]$cboMet.Items.Add("PsExec"); $cboMet.SelectedIndex = 0
-$form.Controls.Add($cboMet); $y += 36
+$form.Controls.Add($cboMet); $y += 34
 
-# Maquinas
+# ===== Maquinas =====
 $form.Controls.Add((New-Label "Maquinas (uma por linha):" 15 $y 200)); $y += 22
 $txtMach = New-Object System.Windows.Forms.TextBox
-$txtMach.Multiline = $true; $txtMach.ScrollBars = "Vertical"
-$txtMach.Location = "15,$y"; $txtMach.Size = "615,110"
+$txtMach.Multiline = $true; $txtMach.ScrollBars = "Vertical"; $txtMach.WordWrap = $false
+$txtMach.Location = "15,$y"; $txtMach.Size = "615,100"
 $txtMach.Font = New-Object System.Drawing.Font("Consolas",9)
 $txtMach.Text = $machAtual
-$form.Controls.Add($txtMach); $y += 120
+$form.Controls.Add($txtMach); $y += 108
 
-# Identidade do agente (avancado)
+# ===== Identidade do agente (avancado) =====
 $grp = New-Object System.Windows.Forms.GroupBox
 $grp.Text = "Identidade do agente (avancado - so mude se trocar de produto)"
 $grp.Location = "15,$y"; $grp.Size = "615,150"
@@ -120,13 +127,12 @@ $grp.Controls.Add((New-Label "PsExec svc:" 320 $gy 55)); $txtPvc = New-Text $d.P
 $txtWork = New-Text $d.WorkDir 500 $gy 95; $grp.Controls.Add($txtWork)
 $form.Controls.Add($grp); $y += 158
 
-# Checkbox provisionar
+# ===== Provisionar + botoes =====
 $chkProv = New-Object System.Windows.Forms.CheckBox
 $chkProv.Text = "Copiar PsExec e MSI para a pasta ao salvar (provisionar)"
 $chkProv.Location = "15,$y"; $chkProv.Size = "500,22"; $chkProv.Checked = $true
 $form.Controls.Add($chkProv); $y += 28
 
-# Status + botoes
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.Location = "15,$y"; $lblStatus.Size = "390,22"; $lblStatus.ForeColor = [System.Drawing.Color]::DarkGreen
 $btnSave = New-Object System.Windows.Forms.Button
@@ -137,10 +143,16 @@ $form.Controls.Add($lblStatus); $form.Controls.Add($btnSave); $form.Controls.Add
 
 $btnSave.Add_Click({
     try {
-        $msiSel  = $txtMsi.Text.Trim()
-        $msiNome = if ($msiSel) { Split-Path $msiSel -Leaf } else { 'Agent.msi' }
-        if ($msiSel -and (Test-Path $msiSel) -and ((Split-Path $msiSel -Parent) -ne $root)) {
-            Copy-Item $msiSel (Join-Path $root $msiNome) -Force
+        # Instalador local e OPCIONAL. Vazio => mantem o nome ja configurado
+        # e conta com a origem (MsiSource) para trazer o arquivo.
+        $msiSel = $txtMsi.Text.Trim()
+        if ($msiSel) {
+            $msiNome = Split-Path $msiSel -Leaf
+            if ((Test-Path $msiSel) -and ((Split-Path $msiSel -Parent) -ne $root)) {
+                Copy-Item $msiSel (Join-Path $root $msiNome) -Force
+            }
+        } else {
+            $msiNome = $d.MsiFileName
         }
         if ($txtToken.Text.Trim()) { Set-Content $tokenPath $txtToken.Text.Trim() -NoNewline -Encoding UTF8 }
         Set-Content $machPath $txtMach.Text -Encoding UTF8
