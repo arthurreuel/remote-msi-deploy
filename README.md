@@ -61,11 +61,31 @@ remote-msi-deploy/
 ```powershell
 # 1. Coloque Agent.msi, token.txt e PSTools\ na raiz
 # 2. Copie config.example.psd1 -> config.psd1 e ajuste nomes/máquinas do seu agente
-# 3. Rode como administrador:
+# 3. Abra o menu de fluxos (como administrador):
 cd <pasta-do-repo>
-powershell -ExecutionPolicy Bypass -File .\scripts\Get-AgentInventory.ps1   # fotografe
-powershell -ExecutionPolicy Bypass -File .\scripts\Deploy-Agent.ps1         # instale
+powershell -ExecutionPolicy Bypass -File .\Menu.ps1
 ```
+
+### Menu de fluxos (`Menu.ps1`)
+
+Um único lançador dá acesso a todos os fluxos — sem decorar comando:
+
+```
+==================================================
+  Remote MSI Deploy - fluxos internos
+  Agente : *Monitor Agent*   Servico: MonitorAgent
+  Alvos  : 12 maquina(s)
+==================================================
+  1) Inventario  (somente leitura)
+  2) Deploy      (instala onde falta - idempotente)
+  3) Re-enroll   (renova identidade)
+  4) Reset       (purga + reinstala + diagnostica)
+  0) Sair
+```
+
+- **Duplo-clique:** `Executar.cmd` abre o menu já elevado (UAC).
+- **Automação:** `.\Menu.ps1 -Flow Deploy` roda um fluxo direto, sem menu (aceita `Inventory|Deploy|Reenroll|Reset`).
+- O **Reset** pede confirmação digitada antes de agir.
 
 Passo a passo completo (inclusive como descobrir os nomes do seu agente): **[docs/USAGE.md](docs/USAGE.md)**. Cada execução grava um `resultado_<operacao>_<timestamp>.csv` auditável na raiz.
 
