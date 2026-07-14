@@ -3,6 +3,14 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.4.2] - 2026-07-14
+
+### Corrigido
+- `Deploy-Agent.ps1`: a linha-resumo (`Instaladas/Já tinham/Pendentes`) lançava
+  erro sob StrictMode quando havia **uma única máquina** (o filtro retornava um
+  objeto/nulo sem `.Count`). Envolvido em `@(...)`. A instalação em si nunca foi
+  afetada — só o contador do rodapé.
+
 ## [1.4.1] - 2026-07-14
 
 ### Alterado
@@ -105,6 +113,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.4.2]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.2
 [1.4.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.1
 [1.4.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.0
 [1.3.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.1

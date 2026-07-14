@@ -66,7 +66,7 @@ Write-Host "`n===== RESUMO =====" -ForegroundColor Cyan
 $relatorio | Format-Table -AutoSize
 Save-Report -Cfg $cfg -Prefix "deploy" -Rows ($relatorio | Select-Object @{n='DataHora';e={Get-Date -Format 'yyyy-MM-dd HH:mm:ss'}}, Maquina, Codigo, Status) | Out-Null
 
-$i = ($relatorio | Where-Object { $_.Status -like 'SUCESSO*' }).Count
-$j = ($relatorio | Where-Object { $_.Status -like 'JA INSTALADO*' }).Count
-$k = ($relatorio | Where-Object { $_.Status -notlike 'SUCESSO*' -and $_.Status -notlike 'JA INSTALADO*' }).Count
+$i = @($relatorio | Where-Object { $_.Status -like 'SUCESSO*' }).Count
+$j = @($relatorio | Where-Object { $_.Status -like 'JA INSTALADO*' }).Count
+$k = @($relatorio | Where-Object { $_.Status -notlike 'SUCESSO*' -and $_.Status -notlike 'JA INSTALADO*' }).Count
 Write-Host ("Instaladas agora: {0}  |  Ja tinham: {1}  |  Pendentes/Falhas: {2}" -f $i,$j,$k) -ForegroundColor Cyan
