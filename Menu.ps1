@@ -20,6 +20,7 @@ $scripts = @{
     Deploy    = 'scripts\Deploy-Agent.ps1'
     Reenroll  = 'scripts\Reenroll-Agent.ps1'
     Reset     = 'scripts\Reset-Agent.ps1'
+    Provision = 'scripts\Provision-Assets.ps1'
 }
 
 function Test-Admin {
@@ -96,6 +97,7 @@ do {
     Write-Host "  3) Re-enroll   (renova identidade - conserta 'offline no painel')"
     Write-Host "  4) Reset       (purga + reinstala + diagnostica - ultimo recurso)"
     Write-Host "  5) Reparar acesso  (compartilhamento C$/SMB e firewall)"
+    Write-Host "  6) Provisionar     (baixa/atualiza PsExec + .msi na pasta)"
     Write-Host "  0) Sair"
     $op = Read-Host "`n  Escolha"
     switch ($op) {
@@ -104,6 +106,7 @@ do {
         '3' { Invoke-Flow Reenroll }
         '4' { Invoke-Flow Reset }
         '5' { Invoke-Repair }
+        '6' { Invoke-Flow Provision }
         '0' { }
         default { Write-Host "  Opcao invalida." -ForegroundColor Red }
     }

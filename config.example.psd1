@@ -16,6 +16,15 @@
     # ---- Instalador -----------------------------------------------------
     # Nome do .msi na raiz do repo (o arquivo em si NAO e versionado).
     MsiFileName      = 'Agent.msi'
+    # Origem do .msi (opcional): pasta de rede/compartilhamento onde a versao
+    # mais recente sempre fica. O provisionamento copia o .msi mais novo dela.
+    # Pode ser uma PASTA (pega o .msi mais recente) ou um ARQUIVO especifico.
+    #   ex.: '\\servidor\share\pasta-com-o-msi'
+    MsiSource        = ''
+    # Origem do PsExec (opcional): se vazio, o provisionamento baixa do
+    # Sysinternals. Aponte um caminho local/rede para ambientes sem internet.
+    #   ex.: '\\servidor\share\PsExec64.exe'
+    PsExecSource     = ''
 
     # ---- Execucao -------------------------------------------------------
     # Pasta de trabalho criada na maquina-alvo.

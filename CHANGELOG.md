@@ -3,6 +3,23 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.3.0] - 2026-07-14
+
+### Adicionado
+- **Provisionamento de binários** (`scripts/Provision-Assets.ps1` +
+  `Invoke-ProvisionAssets`): garante `PSTools\PsExec64.exe` (copiando de
+  `PsExecSource` ou baixando do Sysinternals) e copia o **.msi mais recente**
+  de `MsiSource` (pasta de rede/compartilhamento ou arquivo) para a pasta.
+- Novas chaves de config: **`MsiSource`** e **`PsExecSource`**.
+- **Interface**: campo "Origem do instalador (pasta)" e opção
+  "Copiar PsExec e MSI ao salvar (provisionar)" — ao Salvar, os binários já
+  são copiados para a pasta.
+- Menu: opção **6) Provisionar**.
+
+### Corrigido
+- `Get-DeployConfig` tolera `config.psd1` mínimo sob StrictMode e ganhou
+  `-SkipMachineCheck` (provisionar não exige lista de máquinas).
+
 ## [1.2.0] - 2026-07-14
 
 ### Adicionado
@@ -52,6 +69,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.3.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.0
 [1.2.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.2.0
 [1.1.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.1.0
 [1.0.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.0.0
