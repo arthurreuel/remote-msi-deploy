@@ -1,5 +1,7 @@
-# Segredos — NUNCA versionar
+# Segredos e config real — NUNCA versionar
 token.txt
+config.psd1
+machines.txt
 
 # Instalador e binarios de terceiros
 *.msi

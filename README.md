@@ -16,35 +16,58 @@ Nasceu de um caso real: dezenas de estações precisavam receber um agente de mo
 | GPO Software Installation | Instala apenas no boot/logon; sem feedback imediato; difícil segmentar máquinas avulsas |
 | **PsExec (SMB + SCM)** | **Funciona onde `C$` funciona; execução como SYSTEM; código de saída capturável** |
 
-## Estrutura esperada
+## Quando usar cada script
 
-Os scripts são **portáteis**: usam `$PSScriptRoot`, então basta clonar a pasta para qualquer servidor de gestão e rodar de lá.
+```mermaid
+flowchart TD
+    A[Get-AgentInventory<br/>fotografa o estado] --> B{Agente instalado?}
+    B -- Nao --> C[Deploy-Agent<br/>instala com token]
+    B -- Sim --> D{Aparece no painel?}
+    D -- Sim --> E[OK - nada a fazer]
+    D -- Nao --> F[Reenroll-Agent<br/>renova a identidade]
+    F --> G{Registrou<br/>DeviceId novo?}
+    G -- Sim --> E
+    G -- Nao --> H[Reset-Agent<br/>purga tudo + reinstala + diagnostica]
+    C --> D
+    H --> E
+```
+
+Escale a agressividade da esquerda para a direita — **inventário → deploy → re-enroll → reset**. O reset destrói o estado local; use por último.
+
+## Estrutura
+
+Config centralizado + biblioteca compartilhada. Você ajusta **um** arquivo (`config.psd1`) e todos os scripts o consomem. Tudo é portátil (`$PSScriptRoot`): clone a pasta para qualquer servidor de gestão e rode de lá.
 
 ```
-deploy-folder/
-├── Agent.msi              # instalador do agente (não versionado)
-├── token.txt              # token de enrollment (não versionado — ver token.example.txt)
-├── PSTools/
-│   └── PsExec64.exe       # Sysinternals PsTools (não versionado)
+remote-msi-deploy/
+├── config.psd1            # SUA config (não versionada — ver config.example.psd1)
+├── Agent.msi              # instalador (não versionado)
+├── token.txt              # token de enrollment (não versionado)
+├── PSTools/PsExec64.exe   # Sysinternals (não versionado)
+├── lib/
+│   └── Common.ps1         # loader de config + helpers (ping, PsExec, relatório)
 ├── scripts/
-│   ├── Deploy-Agent.ps1           # instala onde falta (idempotente)
-│   ├── Reenroll-Agent.ps1         # força novo registro no servidor
-│   ├── Reset-Agent.ps1            # desinstala + purga estado + reinstala + diagnostica
-│   └── Get-AgentInventory.ps1     # snapshot: DeviceId, serviço, versão (somente leitura)
-└── resultado_*.csv        # relatórios gerados por execução (não versionados)
+│   ├── Get-AgentInventory.ps1   # snapshot: DeviceId, serviço, versão (só leitura)
+│   ├── Deploy-Agent.ps1         # instala onde falta (idempotente)
+│   ├── Reenroll-Agent.ps1       # força novo registro no servidor
+│   └── Reset-Agent.ps1          # purga estado + reinstala + diagnostica
+└── docs/
+    ├── USAGE.md           # setup e passo a passo
+    └── CASE-STUDY.md      # a investigação real que originou o toolkit
 ```
 
 ## Início rápido
 
 ```powershell
-# 1. Coloque Agent.msi, token.txt e PSTools\ na raiz da pasta
-# 2. Edite a lista $maquinas no topo do script desejado
+# 1. Coloque Agent.msi, token.txt e PSTools\ na raiz
+# 2. Copie config.example.psd1 -> config.psd1 e ajuste nomes/máquinas do seu agente
 # 3. Rode como administrador:
-cd C:\deploy-folder
-powershell -ExecutionPolicy Bypass -File .\scripts\Deploy-Agent.ps1
+cd <pasta-do-repo>
+powershell -ExecutionPolicy Bypass -File .\scripts\Get-AgentInventory.ps1   # fotografe
+powershell -ExecutionPolicy Bypass -File .\scripts\Deploy-Agent.ps1         # instale
 ```
 
-Cada execução imprime um resumo colorido por máquina e grava um `resultado_<operacao>_<timestamp>.csv` — o histórico de execuções fica auditável na própria pasta.
+Passo a passo completo (inclusive como descobrir os nomes do seu agente): **[docs/USAGE.md](docs/USAGE.md)**. Cada execução grava um `resultado_<operacao>_<timestamp>.csv` auditável na raiz.
 
 ## Os quatro scripts
 

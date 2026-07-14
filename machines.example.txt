@@ -1,0 +1,5 @@
+# Uma maquina por linha. Linhas em branco e comecadas com # sao ignoradas.
+# Renomeie para machines.txt e aponte MachinesFile='machines.txt' no config.psd1.
+WS-001
+WS-002
+WS-003
