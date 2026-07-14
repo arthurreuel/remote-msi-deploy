@@ -3,6 +3,21 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.4.0] - 2026-07-14
+
+### Adicionado
+- **Auto-elevação do menu** (`Menu.ps1`): se não estiver como Administrador, o
+  menu se reabre elevado (UAC) automaticamente — o PsExec precisa de admin para
+  acessar `Admin$`/SCM das estações. Antes era só um aviso passivo.
+- **Retry nas execuções remotas** (`Invoke-RemotePSWithRetry`): repete a
+  chamada via PsExec até obter resposta, **variando o nome do serviço `-r`** a
+  cada tentativa (dribla PSEXESVC preso), com espera entre elas. Aplicado ao
+  fluxo **Reparar acesso**. Novas chaves: `RetryCount` e `RetryDelaySeconds`.
+
+### Corrigido
+- Mensagem de falha exibia `SMB/AdminTrue` (o `$?` do PowerShell era
+  interpolado por engano) — corrigido em Reparar acesso e Re-enroll.
+
 ## [1.3.1] - 2026-07-14
 
 ### Alterado
@@ -83,6 +98,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.4.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.0
 [1.3.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.1
 [1.3.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.0
 [1.2.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.2.0

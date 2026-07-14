@@ -79,15 +79,15 @@ $relatorio = foreach ($pc in $cfg.Machines) {
         [PSCustomObject]@{ Maquina=$pc; Acao=$Action; Detalhe="OFFLINE (sem ping)" }; continue
     }
 
-    $r = Invoke-RemotePS -Cfg $cfg -ComputerName $pc -Lines $linhas -Elevated
+    $r = Invoke-RemotePSWithRetry -Cfg $cfg -ComputerName $pc -Lines $linhas -Elevated `
+             -MaxTries ([int]$cfg.RetryCount) -DelaySeconds ([int]$cfg.RetryDelaySeconds) -SuccessPattern 'RESULT;'
     $linha = ($r.Output | Where-Object { $_ -like "RESULT;*" } | Select-Object -First 1)
 
     if (-not $linha) {
-        Write-Host "  [FALHA] sem resposta do PsExec (SMB/Admin$?)" -ForegroundColor Red
-        if ($Action -eq 'EnableSharing') {
-            Write-Host "    -> C$/SMB provavelmente bloqueado: use Repair-Access-Local.ps1 via GPO." -ForegroundColor DarkYellow
-        }
-        [PSCustomObject]@{ Maquina=$pc; Acao=$Action; Detalhe="FALHA (PsExec/SMB)" }; continue
+        Write-Host ("  [FALHA] sem resposta do PsExec apos {0} tentativa(s) - SMB/Admin`$ bloqueado?" -f $cfg.RetryCount) -ForegroundColor Red
+        Write-Host "    -> C`$/SMB provavelmente bloqueado ou sessao SEM privilegio de admin." -ForegroundColor DarkYellow
+        Write-Host "       Verifique: (1) menu aberto como Administrador; (2) Repair-Access-Local.ps1 via GPO." -ForegroundColor DarkYellow
+        [PSCustomObject]@{ Maquina=$pc; Acao=$Action; Detalhe="FALHA (PsExec/SMB) apos $($cfg.RetryCount) tentativas" }; continue
     }
 
     $det = ($linha -replace '^RESULT;','')

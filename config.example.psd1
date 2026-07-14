@@ -31,6 +31,9 @@
     WorkDir          = 'C:\Temp'
     # Nome alternativo do servico do PsExec (-r), evita o PSEXESVC preso.
     PsExecServiceName = 'pvdeploy'
+    # Retry das execucoes remotas (util para falhas transitorias / PSEXESVC preso).
+    RetryCount        = 3     # tentativas por maquina
+    RetryDelaySeconds = 4     # espera entre tentativas
 
     # ---- Alvos ----------------------------------------------------------
     # Lista inline OU aponte MachinesFile para um .txt (um host por linha).

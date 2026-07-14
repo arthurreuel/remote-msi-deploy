@@ -41,7 +41,7 @@ $relatorio = foreach ($pc in $cfg.Machines) {
     $linha = ($r.Output | Where-Object { $_ -like "RESULT=*" } | Select-Object -First 1)
 
     if (-not $linha) {
-        Write-Host "  [FALHA] sem resposta do PsExec (SMB/Admin$?)" -ForegroundColor Red
+        Write-Host "  [FALHA] sem resposta do PsExec (SMB/Admin`$ - sessao com admin?)" -ForegroundColor Red
         [PSCustomObject]@{ Maquina=$pc; DeviceAntes=""; DeviceDepois=""; Status="FALHA (PsExec/SMB)" }; continue
     }
     if ($linha -like "RESULT=SEM_SERVICO*") {

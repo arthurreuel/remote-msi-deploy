@@ -20,7 +20,8 @@ function Get-DeployConfig {
     # Chaves opcionais recebem padrao se ausentes (evita erro sob StrictMode
     # em config.psd1 minimos, e permite rodar o reparo so com a lista de maquinas).
     $defaults = @{ MsiFileName = 'Agent.msi'; WorkDir = 'C:\Temp'; PsExecServiceName = 'pvdeploy'
-                   MachinesFile = ''; MsiSource = ''; PsExecSource = '' }
+                   MachinesFile = ''; MsiSource = ''; PsExecSource = ''
+                   RetryCount = 3; RetryDelaySeconds = 4 }
     foreach ($k in $defaults.Keys) { if (-not $cfg.ContainsKey($k)) { $cfg[$k] = $defaults[$k] } }
 
     # Lista de maquinas: arquivo externo tem prioridade sobre a lista inline.
@@ -74,15 +75,43 @@ function Invoke-RemotePS {
         [Parameter(Mandatory)]$Cfg,
         [Parameter(Mandatory)][string]$ComputerName,
         [Parameter(Mandatory)][string[]]$Lines,
-        [switch]$Elevated                       # -h (roda elevado); use para msiexec
+        [switch]$Elevated,                       # -h (roda elevado); use para msiexec
+        [string]$PsExecService                   # sobrescreve o nome do servico -r (util em retry)
     )
-    $b64  = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(($Lines -join "`n")))
-    $args = @("\\$ComputerName", "-r", $Cfg.PsExecServiceName, "-s")
-    if ($Elevated) { $args += "-h" }
-    $args += @("-nobanner", "-accepteula", "powershell", "-NoProfile", "-EncodedCommand", $b64)
+    $svc    = if ($PsExecService) { $PsExecService } else { $Cfg.PsExecServiceName }
+    $b64    = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(($Lines -join "`n")))
+    $psArgs = @("\\$ComputerName", "-r", $svc, "-s")
+    if ($Elevated) { $psArgs += "-h" }
+    $psArgs += @("-nobanner", "-accepteula", "powershell", "-NoProfile", "-EncodedCommand", $b64)
 
-    $out  = & $Cfg.PsExecPath @args 2>$null
+    $out = & $Cfg.PsExecPath @psArgs 2>$null
     @{ Output = $out; ExitCode = $LASTEXITCODE }
+}
+
+# Executa via PsExec com retry: repete ate obter uma linha "RESULT" (ou ate
+# esgotar as tentativas), variando o nome do servico -r a cada tentativa para
+# driblar PSEXESVC preso, com espera entre elas. Retorna a saida da ultima.
+function Invoke-RemotePSWithRetry {
+    param(
+        [Parameter(Mandatory)]$Cfg,
+        [Parameter(Mandatory)][string]$ComputerName,
+        [Parameter(Mandatory)][string[]]$Lines,
+        [switch]$Elevated,
+        [int]$MaxTries = 3,
+        [int]$DelaySeconds = 4,
+        [string]$SuccessPattern = 'RESULT'
+    )
+    $r = $null
+    for ($try = 1; $try -le $MaxTries; $try++) {
+        if ($try -gt 1) {
+            Write-Host ("  tentativa {0}/{1} (aguardando {2}s)..." -f $try, $MaxTries, $DelaySeconds) -ForegroundColor DarkGray
+            Start-Sleep -Seconds $DelaySeconds
+        }
+        $svc = if ($try -eq 1) { $Cfg.PsExecServiceName } else { "$($Cfg.PsExecServiceName)$try" }
+        $r = Invoke-RemotePS -Cfg $Cfg -ComputerName $ComputerName -Lines $Lines -Elevated:$Elevated -PsExecService $svc
+        if ($r.Output | Where-Object { $_ -like "$SuccessPattern*" }) { break }
+    }
+    $r
 }
 
 # Garante C:\...\WorkDir na maquina via C$ e retorna o caminho UNC (ou $null se sem acesso).

@@ -8,7 +8,7 @@
       (-Flow aceita: Inventory | Deploy | Reenroll | Reset)
 #>
 param(
-    [ValidateSet('Inventory','Deploy','Reenroll','Reset')]
+    [ValidateSet('Inventory','Deploy','Reenroll','Reset','Provision')]
     [string]$Flow
 )
 
@@ -82,8 +82,19 @@ function Show-Header {
     Write-Host "==================================================" -ForegroundColor DarkCyan
 }
 
+# --- Auto-elevacao: PsExec precisa de Administrador para acessar Admin$/SCM
+#     das estacoes. Se nao estiver elevado, reabre este menu como admin (UAC).
 if (-not (Test-Admin)) {
-    Write-Host "AVISO: rode como Administrador (precisa de C$/SCM nas estacoes)." -ForegroundColor Yellow
+    Write-Host "Elevando para Administrador (necessario para o PsExec acessar as estacoes)..." -ForegroundColor Yellow
+    $relArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File', $PSCommandPath)
+    if ($Flow) { $relArgs += @('-Flow', $Flow) }
+    try {
+        Start-Process powershell -Verb RunAs -ArgumentList $relArgs
+    } catch {
+        Write-Host "Elevacao cancelada/negada. O menu precisa de Administrador para funcionar." -ForegroundColor Red
+        Read-Host "Pressione Enter para sair" | Out-Null
+    }
+    return
 }
 
 # --- Modo direto (nao-interativo) ---
