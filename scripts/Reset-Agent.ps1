@@ -52,7 +52,7 @@ $rel = foreach ($pc in $cfg.Machines) {
     Write-Host "  MSI copiado. Reset + reinstall + reenroll (~2min)..." -ForegroundColor Gray
 
     $r   = Invoke-RemotePS -Cfg $cfg -ComputerName $pc -Lines $reset -Elevated
-    $arq = Join-Path $cfg.Root "diag_$pc.txt"; $r.Output | Out-File $arq -Encoding UTF8
+    $arq = Join-Path (Get-LogDir -Cfg $cfg) "diag_$pc.txt"; $r.Output | Out-File $arq -Encoding UTF8
     $key = ($r.Output | Where-Object { $_ -like "RESULT;*" } | Select-Object -First 1)
     Write-Host "  $key" -ForegroundColor Green
     Write-Host "  (detalhe em $arq)" -ForegroundColor DarkGray

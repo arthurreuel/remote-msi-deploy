@@ -3,6 +3,13 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.4.1] - 2026-07-14
+
+### Alterado
+- Relatórios de execução (`resultado_*.csv`, `diag_*.txt`) agora vão para uma
+  pasta dedicada **`Logs\`** (nova chave `LogDir`, relativa à raiz ou caminho
+  absoluto), mantendo a raiz do projeto limpa.
+
 ## [1.4.0] - 2026-07-14
 
 ### Adicionado
@@ -98,6 +105,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.4.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.1
 [1.4.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.0
 [1.3.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.1
 [1.3.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.3.0

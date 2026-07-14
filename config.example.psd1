@@ -34,6 +34,9 @@
     # Retry das execucoes remotas (util para falhas transitorias / PSEXESVC preso).
     RetryCount        = 3     # tentativas por maquina
     RetryDelaySeconds = 4     # espera entre tentativas
+    # Pasta dos relatorios (resultado_*.csv, diag_*.txt). Relativa a raiz ou
+    # um caminho absoluto (ex.: 'D:\Logs\Deploy'). Mantem a raiz limpa.
+    LogDir            = 'Logs'
 
     # ---- Alvos ----------------------------------------------------------
     # Lista inline OU aponte MachinesFile para um .txt (um host por linha).

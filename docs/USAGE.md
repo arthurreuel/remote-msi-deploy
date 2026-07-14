@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Reenroll-Agent.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\Reset-Agent.ps1
 ```
 
-**Sempre confirme no painel de destino**, não só no DeviceId local. Cada execução grava um `resultado_*.csv` auditável na raiz.
+**Sempre confirme no painel de destino**, não só no DeviceId local. Cada execução grava um `resultado_*.csv` auditável na pasta **`Logs\`** (configurável em `LogDir`).
 
 ## Reparar acesso (pré-requisitos das estações)
 

@@ -8,6 +8,7 @@ machines.txt
 PSTools/
 
 # Saidas de execucao (contem nomes de maquinas reais)
+Logs/
 resultado_*.csv
 diag_*.txt
 *.log

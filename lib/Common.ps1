@@ -21,7 +21,7 @@ function Get-DeployConfig {
     # em config.psd1 minimos, e permite rodar o reparo so com a lista de maquinas).
     $defaults = @{ MsiFileName = 'Agent.msi'; WorkDir = 'C:\Temp'; PsExecServiceName = 'pvdeploy'
                    MachinesFile = ''; MsiSource = ''; PsExecSource = ''
-                   RetryCount = 3; RetryDelaySeconds = 4 }
+                   RetryCount = 3; RetryDelaySeconds = 4; LogDir = 'Logs' }
     foreach ($k in $defaults.Keys) { if (-not $cfg.ContainsKey($k)) { $cfg[$k] = $defaults[$k] } }
 
     # Lista de maquinas: arquivo externo tem prioridade sobre a lista inline.
@@ -40,7 +40,15 @@ function Get-DeployConfig {
     $cfg.MsiPath    = Join-Path $Root $cfg.MsiFileName
     $cfg.TokenPath  = Join-Path $Root "token.txt"
     $cfg.PsExecPath = Join-Path $Root "PSTools\PsExec64.exe"
+    $cfg.LogPath    = if ([IO.Path]::IsPathRooted($cfg.LogDir)) { $cfg.LogDir } else { Join-Path $Root $cfg.LogDir }
     $cfg
+}
+
+# Garante a pasta de logs e retorna o caminho.
+function Get-LogDir {
+    param([Parameter(Mandatory)]$Cfg)
+    if (-not (Test-Path $Cfg.LogPath)) { New-Item -ItemType Directory -Force $Cfg.LogPath | Out-Null }
+    $Cfg.LogPath
 }
 
 # Valida pre-requisitos. $Need pode conter 'Msi' e/ou 'Token'.
@@ -186,7 +194,7 @@ function Save-Report {
     param([Parameter(Mandatory)]$Cfg, [Parameter(Mandatory)][string]$Prefix,
           [Parameter(Mandatory)][object[]]$Rows, [string]$Stamp)
     if (-not $Stamp) { $Stamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss" }
-    $csv = Join-Path $Cfg.Root "resultado_${Prefix}_$Stamp.csv"
+    $csv = Join-Path (Get-LogDir -Cfg $Cfg) "resultado_${Prefix}_$Stamp.csv"
     $Rows | Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8
     Write-Host "`nRelatorio salvo em: $csv" -ForegroundColor Cyan
     $csv

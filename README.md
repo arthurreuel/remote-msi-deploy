@@ -90,7 +90,7 @@ Um único lançador dá acesso a todos os fluxos — sem decorar comando:
 - **Automação:** `.\Menu.ps1 -Flow Deploy` roda um fluxo direto, sem menu (aceita `Inventory|Deploy|Reenroll|Reset`).
 - O **Reset** pede confirmação digitada antes de agir.
 
-Passo a passo completo (inclusive como descobrir os nomes do seu agente): **[docs/USAGE.md](docs/USAGE.md)**. Cada execução grava um `resultado_<operacao>_<timestamp>.csv` auditável na raiz.
+Passo a passo completo (inclusive como descobrir os nomes do seu agente): **[docs/USAGE.md](docs/USAGE.md)**. Cada execução grava um `resultado_<operacao>_<timestamp>.csv` auditável na pasta `Logs\`.
 
 ## Os quatro scripts
 
