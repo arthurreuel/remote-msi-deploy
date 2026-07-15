@@ -122,20 +122,22 @@ function Assert-Prereq {
 #     defesa em profundidade. Sem token em texto claro no disco. -----------
 $script:TokenEntropy = [Text.Encoding]::UTF8.GetBytes('RemoteMsiDeploy/token/v1')
 
-function Protect-Secret {
-    param([Parameter(Mandatory)][string]$Plain, [Parameter(Mandatory)][string]$Path)
+function Protect-String {
+    param([Parameter(Mandatory)][string]$Plain)
     Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
     $bytes = [Text.Encoding]::UTF8.GetBytes($Plain)
     $enc = [Security.Cryptography.ProtectedData]::Protect($bytes, $script:TokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine)
-    [Convert]::ToBase64String($enc) | Set-Content -Path $Path -Encoding ASCII -NoNewline
+    [Convert]::ToBase64String($enc)
 }
-function Unprotect-Secret {
-    param([Parameter(Mandatory)][string]$Path)
+function Unprotect-String {
+    param([Parameter(Mandatory)][string]$B64)
     Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
-    $enc = [Convert]::FromBase64String((Get-Content $Path -Raw).Trim())
+    $enc = [Convert]::FromBase64String($B64)
     $bytes = [Security.Cryptography.ProtectedData]::Unprotect($enc, $script:TokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine)
     [Text.Encoding]::UTF8.GetString($bytes)
 }
+function Protect-Secret { param([string]$Plain, [string]$Path); (Protect-String -Plain $Plain) | Set-Content -Path $Path -Encoding ASCII -NoNewline }
+function Unprotect-Secret { param([string]$Path); Unprotect-String -B64 ((Get-Content $Path -Raw).Trim()) }
 
 # Retorna o token. Prefere token.sec (DPAPI); se so existir o token.txt legado,
 # migra para token.sec e apaga o texto claro.
@@ -151,13 +153,30 @@ function Get-Token {
 }
 
 # Credencial admin explicita para PsExec/SMB (quando a sessao atual nao e admin
-# nas estacoes). Usuario vem do config (PsExecUser); senha de cred.sec (DPAPI).
-# Retorna @{ User; Pass } ou $null (usa a identidade da sessao).
+# nas estacoes). Ordem: 1) credencial da SESSAO (prompt do menu, via env var
+# cifrada, herdada pelos fluxos-filho); 2) credencial ARMAZENADA (PsExecUser +
+# cred.sec). Retorna @{ User; Pass } ou $null (usa a identidade da sessao).
 function Get-OperatorCredential {
     param([Parameter(Mandatory)]$Cfg)
-    if (-not $Cfg.PsExecUser -or -not (Test-Path $Cfg.CredSecPath)) { return $null }
-    try { $pass = Unprotect-Secret -Path $Cfg.CredSecPath } catch { return $null }
-    [pscustomobject]@{ User = $Cfg.PsExecUser; Pass = $pass }
+    if ($env:RMD_CRED) {
+        try {
+            $dec = Unprotect-String -B64 $env:RMD_CRED
+            $parts = $dec -split "`n", 2
+            if ($parts.Count -eq 2 -and $parts[0]) { return [pscustomobject]@{ User = $parts[0]; Pass = $parts[1] } }
+        } catch {}
+    }
+    if ($Cfg.PsExecUser -and (Test-Path $Cfg.CredSecPath)) {
+        try { return [pscustomobject]@{ User = $Cfg.PsExecUser; Pass = (Unprotect-Secret -Path $Cfg.CredSecPath) } } catch {}
+    }
+    return $null
+}
+
+# Estabelece (ou refaz) a sessao SMB autenticada com a maquina - o equivalente
+# a "logar no C$" - para que o PsExec e as copias usem a credencial admin.
+function Connect-RemoteShare {
+    param([Parameter(Mandatory)][string]$ComputerName, [Parameter(Mandatory)]$Cred)
+    & net use "\\$ComputerName\IPC`$" /delete 2>$null | Out-Null
+    & net use "\\$ComputerName\IPC`$" /user:"$($Cred.User)" "$($Cred.Pass)" 2>$null | Out-Null
 }
 
 # Ping rapido — evita travar no timeout de SMB de maquina desligada.
@@ -177,6 +196,9 @@ function Invoke-RemotePS {
         [string]$PsExecService                   # sobrescreve o nome do servico -r (util em retry)
     )
     if (-not $script:CredResolved) { $script:OperatorCred = Get-OperatorCredential -Cfg $Cfg; $script:CredResolved = $true }
+    # Com credencial admin, estabelece a sessao SMB autenticada ANTES do PsExec
+    # (equivalente a logar no C$) - e o que faz o PsExec alcancar o Admin$.
+    if ($script:OperatorCred) { Connect-RemoteShare -ComputerName $ComputerName -Cred $script:OperatorCred }
     $svc    = if ($PsExecService) { $PsExecService } else { $Cfg.PsExecServiceName }
     $b64    = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(($Lines -join "`n")))
     $psArgs = @("\\$ComputerName")
@@ -220,10 +242,7 @@ function Invoke-RemotePSWithRetry {
 function New-RemoteWorkDir {
     param([Parameter(Mandatory)]$Cfg, [Parameter(Mandatory)][string]$ComputerName)
     if (-not $script:CredResolved) { $script:OperatorCred = Get-OperatorCredential -Cfg $Cfg; $script:CredResolved = $true }
-    if ($script:OperatorCred) {
-        & net use "\\$ComputerName\IPC`$" /delete 2>$null | Out-Null   # limpa sessao anterior
-        & net use "\\$ComputerName\IPC`$" /user:"$($script:OperatorCred.User)" "$($script:OperatorCred.Pass)" 2>$null | Out-Null
-    }
+    if ($script:OperatorCred) { Connect-RemoteShare -ComputerName $ComputerName -Cred $script:OperatorCred }
     $unc = "\\$ComputerName\$($Cfg.WorkDir.Replace(':','$'))"
     try {
         if (-not (Test-Path $unc)) { New-Item -ItemType Directory -Path $unc -Force -ErrorAction Stop | Out-Null }

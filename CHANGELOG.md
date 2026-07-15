@@ -3,6 +3,19 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.9.0] - 2026-07-15
+
+### Corrigido / Melhorado
+- **Credencial agora funciona de verdade**: antes de **todo** PsExec, a
+  ferramenta estabelece a **sessão SMB autenticada** com a máquina (`net use`
+  no `IPC$`) — o equivalente a "logar no C$". O PsExec sozinho com `-u/-p` não
+  garantia isso, e os fluxos só-PsExec (Reparar/Re-enroll) continuavam falhando.
+- **Credencial pedida na abertura do menu**: informe usuário/senha admin uma vez
+  ao abrir o `Menu`; vale para toda a sessão (cifrada em variável de ambiente,
+  herdada pelos fluxos, **nada gravado em disco**). Enter em branco usa a sessão
+  atual. A credencial armazenada (`cred.sec`) continua como alternativa.
+- Sessões SMB autenticadas são encerradas ao fim de cada fluxo.
+
 ## [1.8.0] - 2026-07-15
 
 ### Adicionado
@@ -163,6 +176,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.9.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.9.0
 [1.8.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.8.0
 [1.7.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.7.0
 [1.6.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.6.0

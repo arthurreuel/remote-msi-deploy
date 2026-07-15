@@ -127,6 +127,24 @@ try {
     }
 } catch { }
 
+# --- Credencial de rede (como "logar no C$"): pedida UMA vez na abertura, vale
+#     para toda a sessao. Cifrada em env var (herdada pelos fluxos), nada em disco.
+#     Enter em branco = usa a identidade da sua sessao (comportamento anterior).
+if (-not $Flow -and -not $env:RMD_CRED) {
+    Write-Host "Credenciais de admin da rede (Enter em branco = usar sua sessao atual):" -ForegroundColor Cyan
+    $u = Read-Host "  Usuario (ex.: DOMINIO\Administrador)"
+    if ($u) {
+        $sp = Read-Host "  Senha" -AsSecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sp)
+        try { $p = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+        $env:RMD_CRED = Protect-String -Plain ("$u`n$p")
+        Write-Host "  Credencial definida para esta sessao (nao gravada em disco)." -ForegroundColor Green
+    } else {
+        Write-Host "  Usando a identidade da sua sessao." -ForegroundColor Gray
+    }
+    Write-Host ""
+}
+
 # --- Modo direto (nao-interativo) ---
 if ($Flow) { Invoke-Flow -Name $Flow; return }
 

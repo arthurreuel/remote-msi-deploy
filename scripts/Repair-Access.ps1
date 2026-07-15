@@ -96,6 +96,8 @@ $relatorio = foreach ($pc in $cfg.Machines) {
     [PSCustomObject]@{ Maquina=$pc; Acao=$Action; Detalhe=$det }
 }
 
+Disconnect-RemoteShares -Cfg $cfg -Machines $cfg.Machines
+
 Write-Host "`n===== RESUMO =====" -ForegroundColor Cyan
 $relatorio | Format-Table -AutoSize -Wrap
 Save-Report -Cfg $cfg -Prefix "repair-$Action" -Rows ($relatorio | Select-Object @{n='DataHora';e={Get-Date -Format 'yyyy-MM-dd HH:mm:ss'}}, Maquina, Acao, Detalhe) | Out-Null

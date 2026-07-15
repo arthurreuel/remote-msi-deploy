@@ -37,5 +37,6 @@ $snap = foreach ($pc in $cfg.Machines) {
     }
 }
 
+Disconnect-RemoteShares -Cfg $cfg -Machines $cfg.Machines
 $snap | Format-Table -AutoSize
 Save-Report -Cfg $cfg -Prefix "inventario" -Rows $snap | Out-Null

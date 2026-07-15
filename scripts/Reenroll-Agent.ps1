@@ -64,6 +64,8 @@ $relatorio = foreach ($pc in $cfg.Machines) {
     }
 }
 
+Disconnect-RemoteShares -Cfg $cfg -Machines $cfg.Machines
+
 Write-Host "`n===== RESUMO =====" -ForegroundColor Cyan
 $relatorio | Format-Table -AutoSize
 Save-Report -Cfg $cfg -Prefix "reenroll" -Rows ($relatorio | Select-Object @{n='DataHora';e={Get-Date -Format 'yyyy-MM-dd HH:mm:ss'}}, Maquina, DeviceAntes, DeviceDepois, Status) | Out-Null

@@ -66,6 +66,8 @@ $relatorio = foreach ($pc in $cfg.Machines) {
     [PSCustomObject]@{ Maquina=$pc; Status=$st }
 }
 
+Disconnect-RemoteShares -Cfg $cfg -Machines $cfg.Machines
+
 Write-Host "`n===== RESUMO =====" -ForegroundColor Cyan
 $relatorio | Format-Table -AutoSize
 Save-Report -Cfg $cfg -Prefix "uninstall" -Rows ($relatorio | Select-Object @{n='DataHora';e={Get-Date -Format 'yyyy-MM-dd HH:mm:ss'}}, Maquina, Status) | Out-Null
