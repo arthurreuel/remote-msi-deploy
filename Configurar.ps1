@@ -28,6 +28,7 @@ $d = @{
     PsExecServiceName = 'pvdeploy'
     Domain            = ''
     Method            = 'PsExec'
+    PsExecUser        = ''
 }
 if (Test-Path $cfgPath) {
     try { $c = Import-PowerShellDataFile $cfgPath; foreach ($k in @($d.Keys)) { if ($c.ContainsKey($k) -and $c[$k]) { $d[$k] = $c[$k] } } } catch {}
@@ -41,6 +42,17 @@ if (Test-Path $secPath) {
         $tokenAtual = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect($enc, $tokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine))
     } catch { $tokenAtual = '' }
 } elseif (Test-Path $tokenPath) { $tokenAtual = (Get-Content $tokenPath -Raw).Trim() }
+
+# Carrega a senha admin existente (cred.sec, DPAPI) para preencher o campo.
+$credPath  = Join-Path $root "cred.sec"
+$credAtual = ''
+if (Test-Path $credPath) {
+    try {
+        Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+        $enc = [Convert]::FromBase64String((Get-Content $credPath -Raw).Trim())
+        $credAtual = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect($enc, $tokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine))
+    } catch { $credAtual = '' }
+}
 # Normaliza quebras de linha para CRLF (a caixa de texto do WinForms so
 # renderiza \r\n; arquivos salvos com \n apareceriam grudados numa linha).
 $machAtual  = if (Test-Path $machPath)  { (Get-Content $machPath) -join "`r`n" } else { '' }
@@ -63,7 +75,7 @@ function New-Hint($text,$x,$y,$w=610) {
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Configurar - Remote MSI Deploy"
-$form.Size = New-Object System.Drawing.Size(660,780)
+$form.Size = New-Object System.Drawing.Size(660,860)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox = $false
@@ -102,7 +114,18 @@ $form.Controls.Add((New-Hint "Use SO em maquina sem acesso a origem acima. Norma
 # ===== Enrollment / rede =====
 $form.Controls.Add((New-Label "Token de enrollment:" 15 $y 150))
 $txtToken = New-Text $tokenAtual 170 $y 460
+$txtToken.UseSystemPasswordChar = $true
 $form.Controls.Add($txtToken); $y += 30
+
+# Credencial admin explicita (opcional) - usada quando a sessao nao e admin nas estacoes
+$form.Controls.Add((New-Label "Usuario admin (opc.):" 15 $y 150))
+$txtUser = New-Text $d.PsExecUser 170 $y 460
+$form.Controls.Add($txtUser); $y += 28
+$form.Controls.Add((New-Label "Senha admin (opc.):" 15 $y 150))
+$txtPass = New-Text $credAtual 170 $y 460
+$txtPass.UseSystemPasswordChar = $true
+$form.Controls.Add($txtPass); $y += 24
+$form.Controls.Add((New-Hint "Preencha so se a sua sessao NAO for admin nas estacoes. Ex.: DOMINIO\\admin (senha cifrada em cred.sec)." 170 $y)); $y += 22
 
 $form.Controls.Add((New-Label "Dominio (informativo):" 15 $y 150))
 $txtDom = New-Text $d.Domain 170 $y 460
@@ -172,6 +195,13 @@ $btnSave.Add_Click({
             [Convert]::ToBase64String($enc) | Set-Content $secPath -Encoding ASCII -NoNewline
             if (Test-Path $tokenPath) { Remove-Item $tokenPath -Force }
         }
+        # Senha admin: cifra em cred.sec (DPAPI), ou remove se o campo estiver vazio.
+        if ($txtPass.Text) {
+            Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+            $pb = [Text.Encoding]::UTF8.GetBytes($txtPass.Text)
+            $penc = [Security.Cryptography.ProtectedData]::Protect($pb, $tokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine)
+            [Convert]::ToBase64String($penc) | Set-Content $credPath -Encoding ASCII -NoNewline
+        } elseif (Test-Path $credPath) { Remove-Item $credPath -Force }
         Set-Content $machPath $txtMach.Text -Encoding UTF8
 
         $esc = { param($s) "$s".Replace("'","''") }
@@ -191,6 +221,7 @@ $btnSave.Add_Click({
     PsExecServiceName = '$(& $esc $txtPvc.Text)'
     Domain            = '$(& $esc $txtDom.Text)'
     Method            = '$($cboMet.SelectedItem)'
+    PsExecUser        = '$(& $esc $txtUser.Text)'
     Machines          = @()
     MachinesFile      = 'machines.txt'
 }

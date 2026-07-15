@@ -21,7 +21,8 @@ function Get-DeployConfig {
     # em config.psd1 minimos, e permite rodar o reparo so com a lista de maquinas).
     $defaults = @{ MsiFileName = 'Agent.msi'; WorkDir = 'C:\Temp'; PsExecServiceName = 'pvdeploy'
                    MachinesFile = ''; MsiSource = ''; PsExecSource = ''
-                   RetryCount = 3; RetryDelaySeconds = 4; LogDir = 'Logs'; AllowUnsignedPsExec = $false }
+                   RetryCount = 3; RetryDelaySeconds = 4; LogDir = 'Logs'; AllowUnsignedPsExec = $false
+                   PsExecUser = '' }
     foreach ($k in $defaults.Keys) { if (-not $cfg.ContainsKey($k)) { $cfg[$k] = $defaults[$k] } }
 
     # Lista de maquinas: arquivo externo tem prioridade sobre a lista inline.
@@ -40,6 +41,7 @@ function Get-DeployConfig {
     $cfg.MsiPath      = Join-Path $Root $cfg.MsiFileName
     $cfg.TokenPath    = Join-Path $Root "token.txt"          # legado (texto claro)
     $cfg.TokenSecPath = Join-Path $Root "token.sec"          # DPAPI (preferido)
+    $cfg.CredSecPath  = Join-Path $Root "cred.sec"           # senha admin (DPAPI)
     $cfg.PsExecPath   = Join-Path $Root "PSTools\PsExec64.exe"
     $cfg.LogPath    = if ([IO.Path]::IsPathRooted($cfg.LogDir)) { $cfg.LogDir } else { Join-Path $Root $cfg.LogDir }
 
@@ -57,6 +59,9 @@ function Assert-SafeConfig {
         if ("$m" -notmatch '^[A-Za-z0-9._\-]+$') {
             throw "Nome de maquina invalido/suspeito: '$m' (use apenas letras, numeros, ponto, hifen, underscore)."
         }
+    }
+    if ($Cfg.ContainsKey('PsExecUser') -and $Cfg.PsExecUser -and "$($Cfg.PsExecUser)" -notmatch '^[A-Za-z0-9.\\@_\-]+$') {
+        throw "PsExecUser invalido: '$($Cfg.PsExecUser)' (use DOMINIO\\usuario ou usuario@dominio)."
     }
     $perigosos = @('"', [string][char]96, '$(')     # aspas, backtick, subexpressao
     $campos = 'AgentDisplayName','ServiceName','RegistryKey','DataDir','BufferFile',
@@ -145,6 +150,16 @@ function Get-Token {
     throw "Token nao configurado. Rode Configurar (interface) e informe o token."
 }
 
+# Credencial admin explicita para PsExec/SMB (quando a sessao atual nao e admin
+# nas estacoes). Usuario vem do config (PsExecUser); senha de cred.sec (DPAPI).
+# Retorna @{ User; Pass } ou $null (usa a identidade da sessao).
+function Get-OperatorCredential {
+    param([Parameter(Mandatory)]$Cfg)
+    if (-not $Cfg.PsExecUser -or -not (Test-Path $Cfg.CredSecPath)) { return $null }
+    try { $pass = Unprotect-Secret -Path $Cfg.CredSecPath } catch { return $null }
+    [pscustomobject]@{ User = $Cfg.PsExecUser; Pass = $pass }
+}
+
 # Ping rapido — evita travar no timeout de SMB de maquina desligada.
 function Test-MachineOnline {
     param([Parameter(Mandatory)][string]$ComputerName)
@@ -161,9 +176,12 @@ function Invoke-RemotePS {
         [switch]$Elevated,                       # -h (roda elevado); use para msiexec
         [string]$PsExecService                   # sobrescreve o nome do servico -r (util em retry)
     )
+    if (-not $script:CredResolved) { $script:OperatorCred = Get-OperatorCredential -Cfg $Cfg; $script:CredResolved = $true }
     $svc    = if ($PsExecService) { $PsExecService } else { $Cfg.PsExecServiceName }
     $b64    = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(($Lines -join "`n")))
-    $psArgs = @("\\$ComputerName", "-r", $svc, "-s")
+    $psArgs = @("\\$ComputerName")
+    if ($script:OperatorCred) { $psArgs += @("-u", $script:OperatorCred.User, "-p", $script:OperatorCred.Pass) }
+    $psArgs += @("-r", $svc, "-s")
     if ($Elevated) { $psArgs += "-h" }
     $psArgs += @("-nobanner", "-accepteula", "powershell", "-NoProfile", "-EncodedCommand", $b64)
 
@@ -198,13 +216,26 @@ function Invoke-RemotePSWithRetry {
 }
 
 # Garante C:\...\WorkDir na maquina via C$ e retorna o caminho UNC (ou $null se sem acesso).
+# Se ha credencial admin explicita, estabelece a sessao SMB autenticada antes.
 function New-RemoteWorkDir {
     param([Parameter(Mandatory)]$Cfg, [Parameter(Mandatory)][string]$ComputerName)
+    if (-not $script:CredResolved) { $script:OperatorCred = Get-OperatorCredential -Cfg $Cfg; $script:CredResolved = $true }
+    if ($script:OperatorCred) {
+        & net use "\\$ComputerName\IPC`$" /delete 2>$null | Out-Null   # limpa sessao anterior
+        & net use "\\$ComputerName\IPC`$" /user:"$($script:OperatorCred.User)" "$($script:OperatorCred.Pass)" 2>$null | Out-Null
+    }
     $unc = "\\$ComputerName\$($Cfg.WorkDir.Replace(':','$'))"
     try {
         if (-not (Test-Path $unc)) { New-Item -ItemType Directory -Path $unc -Force -ErrorAction Stop | Out-Null }
         return $unc
     } catch { return $null }
+}
+
+# Encerra as sessoes SMB autenticadas abertas para as maquinas (limpeza).
+function Disconnect-RemoteShares {
+    param([Parameter(Mandatory)]$Cfg, [string[]]$Machines)
+    if (-not $script:OperatorCred) { return }
+    foreach ($pc in $Machines) { & net use "\\$pc\IPC`$" /delete 2>$null | Out-Null }
 }
 
 # Provisiona os binarios necessarios na pasta: PsExec64.exe e o .msi.

@@ -12,6 +12,7 @@ Isso é poderoso — trate a pasta e a conta como ativos privilegiados.
 | PsExec adulterado/MITM (roda como SYSTEM em todas as estações) | **Verificação Authenticode**: só executa com PsExec **assinado pela Microsoft** (`Assert-PsExecTrusted`, checado a cada fluxo e no provisionamento). |
 | Injeção via nome de máquina ou valor de config nos scripts remotos | **`Assert-SafeConfig`**: hostnames restritos a `[A-Za-z0-9._-]`; campos rejeitam aspas/backtick/`$(`/quebra de linha. Token idem. |
 | Token em texto claro no servidor | O token é guardado em **`token.sec` cifrado com DPAPI (escopo de máquina)** — sem texto claro no disco. O `token.txt` legado é migrado e apagado automaticamente. |
+| Senha admin em texto claro | Quando se usa credencial explícita (`PsExecUser`), a senha é guardada cifrada em **`cred.sec` (DPAPI)** — nunca em texto claro. Não versionada, não viaja no pacote. |
 | Token em texto claro no `install.log` das estações | Deploy/Reset **apagam o MSI e o `install.log`** de `C:\Temp` da estação em caso de sucesso. |
 | Segredos no pacote portátil | O `.zip` **não inclui** o token: o `token.sec` é atrelado à máquina (inútil noutra) e não viaja; reinforme via `Configurar` no destino. |
 | Firewall desativado esquecido ligado | `Reparar acesso` pede confirmação e lembra de reativar. |

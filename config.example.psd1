@@ -42,6 +42,12 @@
     # cadeia de certificado, precisar rodar um PsExec nao verificavel (risco).
     AllowUnsignedPsExec = $false
 
+    # Credencial admin explicita (opcional): usuario que o PsExec/SMB usam quando
+    # a SESSAO atual nao e admin nas estacoes. A senha e informada pela interface
+    # Configurar e guardada cifrada (cred.sec, DPAPI). Vazio = usa a sessao atual.
+    #   ex.: 'DOMINIO\Administrador'  ou  'usuario@dominio'
+    PsExecUser        = ''
+
     # ---- Alvos ----------------------------------------------------------
     # Lista inline OU aponte MachinesFile para um .txt (um host por linha).
     Machines     = @('WS-001','WS-002','WS-003')

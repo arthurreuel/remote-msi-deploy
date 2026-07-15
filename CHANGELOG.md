@@ -3,6 +3,17 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.8.0] - 2026-07-15
+
+### Adicionado
+- **Credencial admin explícita**: quando a sessão atual **não é admin** nas
+  estações (mas você tem um usuário/senha admin que acessa o `C$`), informe-os na
+  interface `Configurar` — o PsExec passa a usar `-u/-p` e o acesso SMB é
+  autenticado com essa conta. Usuário em `PsExecUser`; senha cifrada em
+  `cred.sec` (DPAPI). Vazio = usa a sessão atual (comportamento anterior).
+- Campos de token e senha na interface agora ficam **mascarados**.
+- Mensagens de falha `PsExec/SMB` orientam a configurar a credencial.
+
 ## [1.7.0] - 2026-07-14
 
 ### Segurança
@@ -152,6 +163,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.8.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.8.0
 [1.7.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.7.0
 [1.6.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.6.0
 [1.5.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.5.0

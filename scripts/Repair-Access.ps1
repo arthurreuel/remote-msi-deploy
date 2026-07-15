@@ -85,8 +85,9 @@ $relatorio = foreach ($pc in $cfg.Machines) {
 
     if (-not $linha) {
         Write-Host ("  [FALHA] sem resposta do PsExec apos {0} tentativa(s) - SMB/Admin`$ bloqueado?" -f $cfg.RetryCount) -ForegroundColor Red
-        Write-Host "    -> C`$/SMB provavelmente bloqueado ou sessao SEM privilegio de admin." -ForegroundColor DarkYellow
-        Write-Host "       Verifique: (1) menu aberto como Administrador; (2) Repair-Access-Local.ps1 via GPO." -ForegroundColor DarkYellow
+        Write-Host "    Possiveis causas / correcoes:" -ForegroundColor DarkYellow
+        Write-Host "     - Sessao SEM admin na maquina -> informe Usuario/Senha admin no Configurar." -ForegroundColor DarkYellow
+        Write-Host "     - C`$/SMB bloqueado no firewall -> Repair-Access-Local.ps1 via GPO." -ForegroundColor DarkYellow
         [PSCustomObject]@{ Maquina=$pc; Acao=$Action; Detalhe="FALHA (PsExec/SMB) apos $($cfg.RetryCount) tentativas" }; continue
     }
 

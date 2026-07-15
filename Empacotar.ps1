@@ -18,7 +18,7 @@ try {
     # /E todos os subdirs; /XD exclui pastas; /XF exclui arquivos.
     # O token NAO viaja: token.sec e atrelado a maquina (inutil noutra) e o
     # token.txt seria texto claro. Reinforme o token via Configurar no destino.
-    robocopy $root $staging /E /XD Logs PSTools /XF *.msi *.log token.txt token.sec | Out-Null
+    robocopy $root $staging /E /XD Logs PSTools /XF *.msi *.log token.txt token.sec cred.sec | Out-Null
 
     if (Test-Path $destZip) { Remove-Item $destZip -Force }
     Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $destZip -Force

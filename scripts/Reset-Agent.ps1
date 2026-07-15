@@ -61,5 +61,7 @@ $rel = foreach ($pc in $cfg.Machines) {
     [PSCustomObject]@{ Maquina=$pc; Info=$key }
 }
 
+Disconnect-RemoteShares -Cfg $cfg -Machines $cfg.Machines
+
 Write-Host "`n===== RESUMO =====" -ForegroundColor Cyan
 $rel | Format-Table -AutoSize -Wrap
