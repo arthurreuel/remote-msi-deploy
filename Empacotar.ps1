@@ -14,9 +14,11 @@ $staging = Join-Path $env:TEMP ("pkg_" + [guid]::NewGuid().ToString('N').Substri
 
 New-Item -ItemType Directory -Force $staging | Out-Null
 try {
-    Write-Host "Empacotando (sem Logs / PSTools / *.msi)..." -ForegroundColor Cyan
-    # /E todos os subdirs; /XD exclui pastas; /XF exclui arquivos
-    robocopy $root $staging /E /XD Logs PSTools /XF *.msi *.log | Out-Null
+    Write-Host "Empacotando (sem Logs / PSTools / *.msi / token)..." -ForegroundColor Cyan
+    # /E todos os subdirs; /XD exclui pastas; /XF exclui arquivos.
+    # O token NAO viaja: token.sec e atrelado a maquina (inutil noutra) e o
+    # token.txt seria texto claro. Reinforme o token via Configurar no destino.
+    robocopy $root $staging /E /XD Logs PSTools /XF *.msi *.log token.txt token.sec | Out-Null
 
     if (Test-Path $destZip) { Remove-Item $destZip -Force }
     Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $destZip -Force
@@ -24,13 +26,11 @@ try {
     $mb = [math]::Round((Get-Item $destZip).Length / 1MB, 2)
     Write-Host "`nPacote portatil criado:" -ForegroundColor Green
     Write-Host "  $destZip  ($mb MB)" -ForegroundColor Cyan
-    $temToken = Test-Path (Join-Path $root 'token.txt')
-    if ($temToken) {
-        Write-Host "  [!] O pacote INCLUI o token.txt - trate como confidencial." -ForegroundColor Yellow
-    }
+    Write-Host "  (o token NAO vai no pacote - reinforme-o via Configurar no destino)" -ForegroundColor Gray
     Write-Host "`nNo destino (maquina admin do setor):" -ForegroundColor Gray
     Write-Host "  1) Descompacte a pasta." -ForegroundColor Gray
-    Write-Host "  2) Rode Executar.cmd (ele provisiona PsExec + MSI na 1a vez)." -ForegroundColor Gray
+    Write-Host "  2) Rode Configurar.cmd e informe o token." -ForegroundColor Gray
+    Write-Host "  3) Rode Executar.cmd (provisiona PsExec + MSI na 1a vez)." -ForegroundColor Gray
 } finally {
     Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
 }

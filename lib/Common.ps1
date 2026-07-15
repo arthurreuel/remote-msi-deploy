@@ -36,10 +36,11 @@ function Get-DeployConfig {
         throw "Nenhuma maquina definida (config.Machines ou MachinesFile)."
     }
 
-    $cfg.Root       = $Root
-    $cfg.MsiPath    = Join-Path $Root $cfg.MsiFileName
-    $cfg.TokenPath  = Join-Path $Root "token.txt"
-    $cfg.PsExecPath = Join-Path $Root "PSTools\PsExec64.exe"
+    $cfg.Root         = $Root
+    $cfg.MsiPath      = Join-Path $Root $cfg.MsiFileName
+    $cfg.TokenPath    = Join-Path $Root "token.txt"          # legado (texto claro)
+    $cfg.TokenSecPath = Join-Path $Root "token.sec"          # DPAPI (preferido)
+    $cfg.PsExecPath   = Join-Path $Root "PSTools\PsExec64.exe"
     $cfg.LogPath    = if ([IO.Path]::IsPathRooted($cfg.LogDir)) { $cfg.LogDir } else { Join-Path $Root $cfg.LogDir }
 
     Assert-SafeConfig -Cfg $cfg          # bloqueia injecao via config
@@ -102,15 +103,47 @@ function Assert-Prereq {
         throw "MSI nao encontrado em $($Cfg.MsiPath)."
     }
     if ($Need -contains 'Token') {
-        if (-not (Test-Path $Cfg.TokenPath)) { throw "token.txt nao encontrado em $($Cfg.TokenPath)." }
-        $t = (Get-Content $Cfg.TokenPath -Raw).Trim()
-        if ([string]::IsNullOrWhiteSpace($t)) { throw "token.txt esta vazio." }
-        foreach ($p in @('"', [string][char]96, '$(')) { if ($t.Contains($p)) { throw "token.txt contem caractere perigoso ($p)." } }
-        if ($t -match '[\r\n]') { throw "token.txt contem quebra de linha." }
+        if (-not (Test-Path $Cfg.TokenSecPath) -and -not (Test-Path $Cfg.TokenPath)) {
+            throw "Token nao configurado. Rode Configurar (interface) e informe o token."
+        }
+        $t = Get-Token -Cfg $Cfg              # descriptografa (e migra .txt -> .sec)
+        if ([string]::IsNullOrWhiteSpace($t)) { throw "Token vazio." }
+        foreach ($p in @('"', [string][char]96, '$(')) { if ($t.Contains($p)) { throw "token contem caractere perigoso ($p)." } }
+        if ($t -match '[\r\n]') { throw "token contem quebra de linha." }
     }
 }
 
-function Get-Token { param([Parameter(Mandatory)]$Cfg); (Get-Content $Cfg.TokenPath -Raw).Trim() }
+# --- Token protegido com DPAPI (escopo de maquina). Entropia fixa como
+#     defesa em profundidade. Sem token em texto claro no disco. -----------
+$script:TokenEntropy = [Text.Encoding]::UTF8.GetBytes('RemoteMsiDeploy/token/v1')
+
+function Protect-Secret {
+    param([Parameter(Mandatory)][string]$Plain, [Parameter(Mandatory)][string]$Path)
+    Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+    $bytes = [Text.Encoding]::UTF8.GetBytes($Plain)
+    $enc = [Security.Cryptography.ProtectedData]::Protect($bytes, $script:TokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine)
+    [Convert]::ToBase64String($enc) | Set-Content -Path $Path -Encoding ASCII -NoNewline
+}
+function Unprotect-Secret {
+    param([Parameter(Mandatory)][string]$Path)
+    Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+    $enc = [Convert]::FromBase64String((Get-Content $Path -Raw).Trim())
+    $bytes = [Security.Cryptography.ProtectedData]::Unprotect($enc, $script:TokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine)
+    [Text.Encoding]::UTF8.GetString($bytes)
+}
+
+# Retorna o token. Prefere token.sec (DPAPI); se so existir o token.txt legado,
+# migra para token.sec e apaga o texto claro.
+function Get-Token {
+    param([Parameter(Mandatory)]$Cfg)
+    if (Test-Path $Cfg.TokenSecPath) { return (Unprotect-Secret -Path $Cfg.TokenSecPath).Trim() }
+    if (Test-Path $Cfg.TokenPath) {
+        $t = (Get-Content $Cfg.TokenPath -Raw).Trim()
+        try { Protect-Secret -Plain $t -Path $Cfg.TokenSecPath; Remove-Item $Cfg.TokenPath -Force -ErrorAction SilentlyContinue } catch {}
+        return $t
+    }
+    throw "Token nao configurado. Rode Configurar (interface) e informe o token."
+}
 
 # Ping rapido — evita travar no timeout de SMB de maquina desligada.
 function Test-MachineOnline {

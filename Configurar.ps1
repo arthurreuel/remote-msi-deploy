@@ -9,8 +9,10 @@ Add-Type -AssemblyName System.Drawing
 
 $root       = $PSScriptRoot
 $cfgPath    = Join-Path $root "config.psd1"
-$tokenPath  = Join-Path $root "token.txt"
+$tokenPath  = Join-Path $root "token.txt"   # legado (texto claro)
+$secPath    = Join-Path $root "token.sec"   # DPAPI (preferido)
 $machPath   = Join-Path $root "machines.txt"
+$tokenEntropy = [Text.Encoding]::UTF8.GetBytes('RemoteMsiDeploy/token/v1')
 
 # ---- valores padrao (generico) + carga do config existente -------------
 $d = @{
@@ -30,7 +32,15 @@ $d = @{
 if (Test-Path $cfgPath) {
     try { $c = Import-PowerShellDataFile $cfgPath; foreach ($k in @($d.Keys)) { if ($c.ContainsKey($k) -and $c[$k]) { $d[$k] = $c[$k] } } } catch {}
 }
-$tokenAtual = if (Test-Path $tokenPath) { (Get-Content $tokenPath -Raw).Trim() } else { '' }
+# Carrega o token existente: prefere token.sec (DPAPI), senao token.txt legado.
+$tokenAtual = ''
+if (Test-Path $secPath) {
+    try {
+        Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+        $enc = [Convert]::FromBase64String((Get-Content $secPath -Raw).Trim())
+        $tokenAtual = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect($enc, $tokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine))
+    } catch { $tokenAtual = '' }
+} elseif (Test-Path $tokenPath) { $tokenAtual = (Get-Content $tokenPath -Raw).Trim() }
 # Normaliza quebras de linha para CRLF (a caixa de texto do WinForms so
 # renderiza \r\n; arquivos salvos com \n apareceriam grudados numa linha).
 $machAtual  = if (Test-Path $machPath)  { (Get-Content $machPath) -join "`r`n" } else { '' }
@@ -154,7 +164,14 @@ $btnSave.Add_Click({
         } else {
             $msiNome = $d.MsiFileName
         }
-        if ($txtToken.Text.Trim()) { Set-Content $tokenPath $txtToken.Text.Trim() -NoNewline -Encoding UTF8 }
+        # Token: cifra com DPAPI (escopo de maquina) em token.sec; remove o .txt legado.
+        if ($txtToken.Text.Trim()) {
+            Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+            $b = [Text.Encoding]::UTF8.GetBytes($txtToken.Text.Trim())
+            $enc = [Security.Cryptography.ProtectedData]::Protect($b, $tokenEntropy, [Security.Cryptography.DataProtectionScope]::LocalMachine)
+            [Convert]::ToBase64String($enc) | Set-Content $secPath -Encoding ASCII -NoNewline
+            if (Test-Path $tokenPath) { Remove-Item $tokenPath -Force }
+        }
         Set-Content $machPath $txtMach.Text -Encoding UTF8
 
         $esc = { param($s) "$s".Replace("'","''") }

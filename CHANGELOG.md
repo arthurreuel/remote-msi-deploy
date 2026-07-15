@@ -3,6 +3,16 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.7.0] - 2026-07-14
+
+### Segurança
+- **Token sem texto claro**: o token passa a ser guardado **cifrado com DPAPI**
+  (escopo de máquina) em `token.sec`. A interface `Configurar` cifra ao salvar; os
+  fluxos descriptografam na hora de usar. Um `token.txt` legado é **migrado
+  automaticamente** para `token.sec` e apagado.
+- **Token não viaja no pacote portátil**: como o `token.sec` é atrelado à máquina,
+  o `Empacotar` o exclui — reinforme o token via `Configurar` no destino.
+
 ## [1.6.0] - 2026-07-14
 
 ### Segurança
@@ -142,6 +152,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.7.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.7.0
 [1.6.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.6.0
 [1.5.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.5.0
 [1.4.2]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.2

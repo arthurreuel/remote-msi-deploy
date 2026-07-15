@@ -5,7 +5,7 @@
 1. **Clone o repo** para o servidor de gestão (ou copie a pasta).
 2. **Coloque na raiz:**
    - `Agent.msi` — o instalador do seu agente.
-   - `token.txt` — o token de enrollment (copie de `token.example.txt`).
+   - O **token de enrollment** é informado pela interface `Configurar` (fica cifrado em `token.sec`, DPAPI). Não precisa criar `token.txt` à mão.
    - `PSTools\PsExec64.exe` — baixe o [Sysinternals PsTools](https://learn.microsoft.com/sysinternals/downloads/psexec).
 3. **Crie o `config.psd1`:** copie `config.example.psd1` → `config.psd1` e ajuste os nomes do **seu** agente:
    - `AgentDisplayName`, `ServiceName`, `RegistryKey`, `DataDir`, `BufferFile`, `TokenProperty`.
@@ -92,7 +92,7 @@ de token nem do `.msi` (desinstala pelo ProductCode já presente na máquina).
 A ferramenta roda de qualquer pasta e em qualquer máquina admin do domínio.
 
 1. `Empacotar.cmd` gera um **`.zip` leve** na pasta pai (sem `Logs/`, `PSTools/`
-   e `*.msi`). Ele **inclui** `config.psd1` e `token.txt` — trate como confidencial.
+   e `*.msi`). O **token não viaja** (o `token.sec` é atrelado à máquina) — você o reinforma no destino.
 2. Copie o `.zip` para a outra máquina e descompacte.
 3. Rode **`Executar.cmd`** (como admin). Na **primeira execução**, o menu
    **provisiona sozinho** o PsExec e o `.msi` (da origem configurada) — depois é só
