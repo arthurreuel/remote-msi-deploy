@@ -3,6 +3,21 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.6.0] - 2026-07-14
+
+### Segurança
+- **Verificação Authenticode do PsExec**: a ferramenta só executa com um
+  `PsExec64.exe` **assinado pela Microsoft** (checado a cada fluxo e no
+  provisionamento; binário suspeito é removido). Escape: `AllowUnsignedPsExec`.
+- **Validação anti-injeção** (`Assert-SafeConfig`): nomes de máquina restritos a
+  `[A-Za-z0-9._-]`; campos de config e o token rejeitam aspas/backtick/`$(`/quebra
+  de linha (evita RCE como SYSTEM via config adulterado).
+- **Blindagem de ACL** (`Harden-Acl.ps1` / `Blindar.cmd`): restringe a pasta a
+  Administradores + SYSTEM (SIDs locale-independentes).
+- **Higiene do token**: Deploy e Reset apagam o MSI e o `install.log` (que contém
+  o token) de `C:\Temp` da estação em caso de sucesso.
+- **`SECURITY.md`** com modelo de ameaça e checklist de blindagem.
+
 ## [1.5.0] - 2026-07-14
 
 ### Adicionado
@@ -127,6 +142,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.6.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.6.0
 [1.5.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.5.0
 [1.4.2]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.2
 [1.4.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.4.1

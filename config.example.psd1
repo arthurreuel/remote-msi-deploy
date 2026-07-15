@@ -37,6 +37,10 @@
     # Pasta dos relatorios (resultado_*.csv, diag_*.txt). Relativa a raiz ou
     # um caminho absoluto (ex.: 'D:\Logs\Deploy'). Mantem a raiz limpa.
     LogDir            = 'Logs'
+    # Seguranca: por padrao o PsExec e verificado como assinado pela Microsoft
+    # antes de usar. So mude para $true se, num ambiente sem validacao de
+    # cadeia de certificado, precisar rodar um PsExec nao verificavel (risco).
+    AllowUnsignedPsExec = $false
 
     # ---- Alvos ----------------------------------------------------------
     # Lista inline OU aponte MachinesFile para um .txt (um host por linha).

@@ -45,6 +45,9 @@ $relatorio = foreach ($pc in $cfg.Machines) {
 
     $install = @(
         ('$p = Start-Process msiexec -Wait -PassThru -ArgumentList "/i","' + "$($cfg.WorkDir)\$msiNome" + '","' + $cfg.TokenProperty + '=' + $token + '","/qn","/norestart","/l*v","' + "$($cfg.WorkDir)\install.log" + '"')
+        # Seguranca: em caso de sucesso, remove o MSI e o install.log (que contem
+        # o token na linha de comando) de C:\Temp da estacao. Falha mantem o log.
+        ('if ($p.ExitCode -in 0,3010) { Remove-Item "' + "$($cfg.WorkDir)\$msiNome" + '","' + "$($cfg.WorkDir)\install.log" + '" -Force -ErrorAction SilentlyContinue }')
         'exit $p.ExitCode'
     )
     $ri   = Invoke-RemotePS -Cfg $cfg -ComputerName $pc -Lines $install -Elevated

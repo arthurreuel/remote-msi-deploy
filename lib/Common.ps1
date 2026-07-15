@@ -21,7 +21,7 @@ function Get-DeployConfig {
     # em config.psd1 minimos, e permite rodar o reparo so com a lista de maquinas).
     $defaults = @{ MsiFileName = 'Agent.msi'; WorkDir = 'C:\Temp'; PsExecServiceName = 'pvdeploy'
                    MachinesFile = ''; MsiSource = ''; PsExecSource = ''
-                   RetryCount = 3; RetryDelaySeconds = 4; LogDir = 'Logs' }
+                   RetryCount = 3; RetryDelaySeconds = 4; LogDir = 'Logs'; AllowUnsignedPsExec = $false }
     foreach ($k in $defaults.Keys) { if (-not $cfg.ContainsKey($k)) { $cfg[$k] = $defaults[$k] } }
 
     # Lista de maquinas: arquivo externo tem prioridade sobre a lista inline.
@@ -41,7 +41,46 @@ function Get-DeployConfig {
     $cfg.TokenPath  = Join-Path $Root "token.txt"
     $cfg.PsExecPath = Join-Path $Root "PSTools\PsExec64.exe"
     $cfg.LogPath    = if ([IO.Path]::IsPathRooted($cfg.LogDir)) { $cfg.LogDir } else { Join-Path $Root $cfg.LogDir }
+
+    Assert-SafeConfig -Cfg $cfg          # bloqueia injecao via config
     $cfg
+}
+
+# Rejeita valores perigosos no config (defesa contra injecao nos scripts remotos
+# que rodam como SYSTEM). Nomes de maquina restritos a caracteres de host; campos
+# inseridos em scripts remotos nao podem conter aspas/backtick/subexpressao.
+function Assert-SafeConfig {
+    param([Parameter(Mandatory)]$Cfg)
+
+    foreach ($m in @($Cfg.Machines)) {
+        if ("$m" -notmatch '^[A-Za-z0-9._\-]+$') {
+            throw "Nome de maquina invalido/suspeito: '$m' (use apenas letras, numeros, ponto, hifen, underscore)."
+        }
+    }
+    $perigosos = @('"', [string][char]96, '$(')     # aspas, backtick, subexpressao
+    $campos = 'AgentDisplayName','ServiceName','RegistryKey','DataDir','BufferFile',
+              'TokenProperty','WorkDir','MsiFileName','PsExecServiceName'
+    foreach ($c in $campos) {
+        if ($Cfg.ContainsKey($c) -and $Cfg[$c]) {
+            $v = [string]$Cfg[$c]
+            foreach ($p in $perigosos) { if ($v.Contains($p)) { throw "Config '$c' contem caractere perigoso ($p)." } }
+            if ($v -match '[\r\n]') { throw "Config '$c' contem quebra de linha." }
+        }
+    }
+}
+
+# Verifica que o PsExec e autentico (assinado pela Microsoft) antes de usa-lo
+# como SYSTEM nas estacoes. Escape: AllowUnsignedPsExec = $true no config.
+function Assert-PsExecTrusted {
+    param([Parameter(Mandatory)]$Cfg)
+    if ($Cfg.ContainsKey('AllowUnsignedPsExec') -and $Cfg.AllowUnsignedPsExec) { return }
+    $sig = Get-AuthenticodeSignature -FilePath $Cfg.PsExecPath -ErrorAction SilentlyContinue
+    if (-not $sig -or $sig.Status -ne 'Valid') {
+        throw "PsExec com assinatura invalida (Status=$($sig.Status)). Rode Provisionar para baixar do Sysinternals, ou verifique o binario. (Escape: AllowUnsignedPsExec=`$true no config.)"
+    }
+    if ("$($sig.SignerCertificate.Subject)" -notmatch 'Microsoft Corporation') {
+        throw "PsExec nao esta assinado pela Microsoft. Binario nao confiavel."
+    }
 }
 
 # Garante a pasta de logs e retorna o caminho.
@@ -58,6 +97,7 @@ function Assert-Prereq {
     if (-not (Test-Path $Cfg.PsExecPath)) {
         throw "PsExec nao encontrado em $($Cfg.PsExecPath). Baixe o Sysinternals PsTools e coloque em PSTools\."
     }
+    Assert-PsExecTrusted -Cfg $Cfg        # so executa com PsExec autentico da Microsoft
     if ($Need -contains 'Msi' -and -not (Test-Path $Cfg.MsiPath)) {
         throw "MSI nao encontrado em $($Cfg.MsiPath)."
     }
@@ -65,6 +105,8 @@ function Assert-Prereq {
         if (-not (Test-Path $Cfg.TokenPath)) { throw "token.txt nao encontrado em $($Cfg.TokenPath)." }
         $t = (Get-Content $Cfg.TokenPath -Raw).Trim()
         if ([string]::IsNullOrWhiteSpace($t)) { throw "token.txt esta vazio." }
+        foreach ($p in @('"', [string][char]96, '$(')) { if ($t.Contains($p)) { throw "token.txt contem caractere perigoso ($p)." } }
+        if ($t -match '[\r\n]') { throw "token.txt contem quebra de linha." }
     }
 }
 
@@ -164,6 +206,16 @@ function Invoke-ProvisionAssets {
             $msgs.Add("PsExec: baixado do Sysinternals.")
         } catch {
             $msgs.Add("PsExec: FALHA ao obter ($($_.Exception.Message)). Coloque PsExec64.exe em PSTools\ manualmente.")
+        }
+    }
+    # Verifica autenticidade (assinado pela Microsoft). Binario suspeito e apagado.
+    if (Test-Path $Cfg.PsExecPath) {
+        $sig = Get-AuthenticodeSignature -FilePath $Cfg.PsExecPath -ErrorAction SilentlyContinue
+        if ($sig -and $sig.Status -eq 'Valid' -and "$($sig.SignerCertificate.Subject)" -match 'Microsoft Corporation') {
+            $msgs.Add("PsExec: assinatura Microsoft OK.")
+        } elseif (-not ($Cfg.ContainsKey('AllowUnsignedPsExec') -and $Cfg.AllowUnsignedPsExec)) {
+            Remove-Item $Cfg.PsExecPath -Force -ErrorAction SilentlyContinue
+            $msgs.Add("PsExec: assinatura INVALIDA (Status=$($sig.Status)) - binario removido por seguranca.")
         }
     }
 

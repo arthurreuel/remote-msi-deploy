@@ -34,6 +34,8 @@ $reset = @(
     '$t443 = (Test-NetConnection -ComputerName $u.Host -Port 443 -WarningAction SilentlyContinue).TcpTestSucceeded'
     '$tws = if ($p.ReverbPort) { (Test-NetConnection -ComputerName $u.Host -Port $p.ReverbPort -WarningAction SilentlyContinue).TcpTestSucceeded } else { "n/a" }'
     'Write-Output ("RESULT;ExitInstall=" + $pi.ExitCode + ";DeviceId=" + $dev + ";Servico=" + $svc + ";HTTP=" + $http + ";P443=" + $t443 + ";PortaWS=" + $tws)'
+    # Seguranca: remove o MSI e o install.log (com o token) de C:\Temp em caso de sucesso.
+    'if ($pi.ExitCode -in 0,3010) { Remove-Item $msi,$log -Force -ErrorAction SilentlyContinue }'
     'exit $pi.ExitCode'
 )
 
