@@ -127,20 +127,27 @@ try {
     }
 } catch { }
 
-# --- Credencial de rede (como "logar no C$"): pedida UMA vez na abertura, vale
-#     para toda a sessao. Cifrada em env var (herdada pelos fluxos), nada em disco.
-#     Enter em branco = usa a identidade da sua sessao (comportamento anterior).
+# --- Credencial: por padrao usa a IDENTIDADE DA SESSAO (usuario logado no
+#     servidor). So pede credencial de admin do DOMINIO se o usuario logado
+#     NAO for admin de dominio (grupos com SID -512 Domain Admins / -519
+#     Enterprise Admins). Assim, quem opera como admin de dominio nao ve prompt.
 if (-not $Flow -and -not $env:RMD_CRED) {
-    Write-Host "Credenciais de admin da rede (Enter em branco = usar sua sessao atual):" -ForegroundColor Cyan
-    $u = Read-Host "  Usuario (ex.: DOMINIO\Administrador)"
-    if ($u) {
-        $sp = Read-Host "  Senha" -AsSecureString
-        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sp)
-        try { $p = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
-        $env:RMD_CRED = Protect-String -Plain ("$u`n$p")
-        Write-Host "  Credencial definida para esta sessao (nao gravada em disco)." -ForegroundColor Green
+    $grp = [Security.Principal.WindowsIdentity]::GetCurrent().Groups.Value
+    $isDomAdmin = @($grp | Where-Object { $_ -match '-512$' -or $_ -match '-519$' }).Count -gt 0
+    if ($isDomAdmin) {
+        Write-Host "Usando as credenciais da sua sessao (admin de dominio detectado)." -ForegroundColor Green
     } else {
-        Write-Host "  Usando a identidade da sua sessao." -ForegroundColor Gray
+        Write-Host "Sua sessao nao e admin de dominio - operacoes nas estacoes podem exigir credencial." -ForegroundColor Yellow
+        $u = Read-Host "  Usuario admin do DOMINIO (Enter em branco = tentar com a sessao atual)"
+        if ($u) {
+            $sp = Read-Host "  Senha" -AsSecureString
+            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sp)
+            try { $p = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+            $env:RMD_CRED = Protect-String -Plain ("$u`n$p")
+            Write-Host "  Credencial definida para esta sessao (nao gravada em disco)." -ForegroundColor Green
+        } else {
+            Write-Host "  Usando a identidade da sua sessao." -ForegroundColor Gray
+        }
     }
     Write-Host ""
 }

@@ -3,6 +3,18 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.9.1] - 2026-07-15
+
+### Alterado
+- **Credencial só quando necessária**: por padrão a ferramenta usa a identidade
+  da sessão (usuário logado no servidor). O menu só pede credencial de admin do
+  **domínio** se o usuário logado **não** for admin de domínio (detectado pelos
+  SIDs -512 Domain Admins / -519 Enterprise Admins). Quem opera como admin de
+  domínio não vê mais o prompt.
+- Nota de diagnóstico: `PSEXESVC ... Acesso negado` com `net use`/`ADMIN$`
+  funcionando = conta **local** filtrada pelo UAC remoto; use conta de domínio
+  (ou habilite `LocalAccountTokenFilterPolicy` via GPO).
+
 ## [1.9.0] - 2026-07-15
 
 ### Corrigido / Melhorado
@@ -176,6 +188,7 @@ monitoramento (`.msi`) em massa num domínio Windows sem WinRM.
 - `.gitignore` protege segredos (`token.txt`, `config.psd1`, `machines.txt`,
   `*.msi`, `PSTools/`) e saídas de execução.
 
+[1.9.1]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.9.1
 [1.9.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.9.0
 [1.8.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.8.0
 [1.7.0]: https://github.com/arthurreuel/remote-msi-deploy/releases/tag/v1.7.0
